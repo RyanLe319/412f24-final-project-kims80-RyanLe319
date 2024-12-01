@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
@@ -19,9 +20,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smithsonian.ui.theme.SmithsonianTheme
 
 enum class Screens {
-    MAINMENU,
-    SECONDMENU,
-    ITEMS,
+    MAIN,
+    CATEGORY,
+    SEARCH,
+    TERMS,
+    FAVORITES
 }
 
 class MainActivity : ComponentActivity() {
@@ -30,54 +33,55 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
 
-            NavHost(navController, startDestination = Screens.MAINMENU.name) {
+            NavHost(navController, startDestination = Screens.MAIN.name) {
                 // Main menu with major categories
-                composable(Screens.MAINMENU.name) {
+                composable(Screens.MAIN.name) {
                     Column {
                         Text("Main Menu")
                         Button(
                             onClick = {
-                                navController.navigate(Screens.SECONDMENU.name)
+                                navController.navigate(Screens.CATEGORY.name)
                             }
                         ) {
-                            Text("Second Menu")
+                            Text("Category")
                         }
                     }
                 }
-                // Secondary menu with subcategories
-                composable(Screens.SECONDMENU.name) {
-                    Column {
-                        Text("Second Menu")
-                        Button(
-                            onClick = {
-                                navController.navigate(Screens.MAINMENU.name)
-                            }
-                        ) {
-                            Text("Main Menu")
-                        }
-                        Button(
-                            onClick = {
-                                navController.navigate(Screens.ITEMS.name)
-                            }
-                        ) {
-                            Text("Items Page")
-                        }
-                    }
+                // Page where you can search for objects within specific categories
+                composable(Screens.CATEGORY.name) {
+
                 }
-                // Items page for showing artifacts
-                composable(Screens.ITEMS.name) {
-                    Column {
-                        Text("Items Page")
-                        Button(
-                            onClick = {
-                                navController.navigate(Screens.SECONDMENU.name)
-                            }
-                        ) {
-                            Text("Second Menu")
-                        }
-                    }
+                // Page where you can search for objects by terms
+                composable(Screens.TERMS.name) {
+
+                }
+                // Page where you can search for items from all available objects
+                composable(Screens.SEARCH.name) {
+
+                }
+                // Page where you can see objects that were added to favorites
+                composable(Screens.FAVORITES.name) {
+
                 }
             }
         }
     }
+}
+
+// Composable to display a lazy staggered grid with given object list
+@Composable
+fun DisplayObjects(objectList: SnapshotStateList<SmithsonianObject>) {
+
+}
+
+// Composable to display a list of term options for a term category
+@Composable
+fun DisplayTermOptions(termList: List<String>) {
+
+}
+
+// Composable to display a dialogue for each Smithsonian object
+@Composable
+fun DisplayDialogue(onDismissRequest: () -> Unit, obj: SmithsonianObject) {
+
 }

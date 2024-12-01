@@ -4,7 +4,7 @@ import org.json.JSONObject
 import java.net.URL
 
 
-data class Objects(
+data class SmithsonianObject(
     val id: String,
     val title: String,
     val image: String,
@@ -16,8 +16,8 @@ class SmithsonianApi {
     val key = "yYnf3mDl3MHUEU0e08pGBvqVzdliAA7FfpaAUosn"
 
     // General search function, searches by keyword among all available objects
-    fun searchGeneral(keyword: String, start: Int = 0, rows: Int = 10): List<Objects> {
-        val result = mutableListOf<Objects>()
+    fun searchGeneral(keyword: String, start: Int = 0, rows: Int = 10): List<SmithsonianObject> {
+        val result = mutableListOf<SmithsonianObject>()
         val urlstring = "https://api.si.edu/openaccess/api/v1.0/search?q=\"$keyword\"&start=$start&rows=$rows&api_key=$key"
         val url = URL(urlstring)
         val response = url.readText()
@@ -36,7 +36,7 @@ class SmithsonianApi {
                     val id = obj.getString("id")
                     val title = obj.getString("title")
                     val image = media.getString("content")
-                    val newObject = Objects(id = id, title = title, image = image)
+                    val newObject = SmithsonianObject(id = id, title = title, image = image)
                     result.add(newObject)
                 }
                 else {
@@ -51,8 +51,8 @@ class SmithsonianApi {
     }
 
     // Category search function,searches by keyword within a category
-    fun searchCategory(keyword: String, category: String, start: Int = 0, rows: Int = 10): List<Objects> {
-        val result = mutableListOf<Objects>()
+    fun searchCategory(keyword: String, category: String, start: Int = 0, rows: Int = 10): List<SmithsonianObject> {
+        val result = mutableListOf<SmithsonianObject>()
         val urlstring = "https://api.si.edu/openaccess/api/v1.0/category/$category/search?api_key=$key&q=\"$keyword\"&start=$start&rows=$rows"
         val url = URL(urlstring)
         val response = url.readText()
@@ -71,7 +71,7 @@ class SmithsonianApi {
                     val id = obj.getString("id")
                     val title = obj.getString("title")
                     val image = media.getString("content")
-                    val newObject = Objects(id = id, title = title, image = image)
+                    val newObject = SmithsonianObject(id = id, title = title, image = image)
                     result.add(newObject)
                 }
                 else {
@@ -82,6 +82,20 @@ class SmithsonianApi {
                 continue
             }
         }
+        return result
+    }
+
+    fun searchTerms(term: String): List<String> {
+        val result = mutableListOf<String>()
+        val urlstring = "https://api.si.edu/openaccess/api/v1.0/terms/$term?api_key=$key"
+        val url = URL(urlstring)
+        val response = url.readText()
+        val json = JSONObject(response)
+        val terms = json.getJSONObject("response").getJSONArray("terms")
+        for(i in 0 until terms.length()) {
+            result.add(terms[i] as String)
+        }
+
         return result
     }
 }
