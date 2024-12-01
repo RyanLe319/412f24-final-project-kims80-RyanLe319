@@ -30,7 +30,6 @@ import kotlinx.coroutines.withContext
 
 enum class Screens {
     MAIN,
-    CATEGORY,
     SEARCH,
     TERMS,
     SUBTERMS,
@@ -52,20 +51,11 @@ class MainActivity : ComponentActivity() {
             }
 
             NavHost(navController, startDestination = Screens.MAIN.name) {
-                // Main menu with major categories
+                // Main menu with major options
                 composable(Screens.MAIN.name) {
-                    Column {
-                        Text("Main Menu")
-                        Button(
-                            onClick = {
-                                navController.navigate(Screens.CATEGORY.name)
-                            }
-                        ) {
-                            Text("Category")
-                        }
-                    }
+
                 }
-                // Page where you can search for items from all available objects
+                // Page where you can search for objects within different categories
                 composable(Screens.SEARCH.name) {
 
                 }
@@ -73,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 composable(Screens.TERMS.name) {
 
                 }
-                // Page where you can select subterms to search
+                // Page where you can select sub terms to search
                 composable(Screens.SUBTERMS.name) {
 
                 }
