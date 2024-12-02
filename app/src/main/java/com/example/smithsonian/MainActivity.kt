@@ -9,14 +9,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -58,6 +63,7 @@ val batchSize = 1000
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             val scope = rememberCoroutineScope()
             val navController = rememberNavController()
@@ -68,6 +74,8 @@ class MainActivity : ComponentActivity() {
             val currentRow = remember { mutableIntStateOf(0) }
             val trigger = remember { mutableStateOf(true) }
             var status by remember { mutableStateOf("Waiting for search") }
+            var selectedTerm: MutableState<String> =  remember { mutableStateOf("") }
+
 
             // This LaunchedEffect triggers everytime the trigger is set to false
             // It will add more objects to the current objectList and update the status
@@ -224,10 +232,13 @@ class MainActivity : ComponentActivity() {
                 // Page where you can search for objects by terms
                 composable(Screens.TERMS.name) {
                     // Terms screen content
+                    TermScreen(navController = navController, selectedTerm = selectedTerm)
+
                 }
                 // Page where you can select sub terms to search
                 composable(Screens.SUBTERMS.name) {
                     // Subterms screen content
+                    SubTermScreen(navController = navController, selectedTerm = selectedTerm)
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
@@ -262,7 +273,7 @@ fun MainScreen(navController: NavController) {
             fontSize = 30.sp
         )
 
-        // Create buttons dynamically from the lists
+
         for (i in buttonColors.indices) {
             GenerateClickableRectangle(
                 text = buttonTexts[i],
@@ -273,6 +284,103 @@ fun MainScreen(navController: NavController) {
 
     }
 }
+
+@Composable
+fun TermScreen(navController: NavController, selectedTerm: MutableState<String>) {
+    val buttonColors = listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow)
+    val buttonTexts = listOf("culture", "data_source", "place", "topic")
+    val destinations = Screens.SUBTERMS.name
+
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Text(
+            text = "Terms Screen",
+            fontSize = 30.sp
+        )
+
+        for (i in buttonColors.indices) {
+            GenerateClickableRectangle(
+                text = buttonTexts[i],
+                color = buttonColors[i],
+                onClick = {
+                    selectedTerm.value = buttonTexts[i]
+                    navController.navigate(Screens.SUBTERMS.name)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SubTermScreen(navController: NavController, selectedTerm: MutableState<String>) {
+
+    val termsList = remember { mutableStateListOf<String>() }
+    val isLoading = remember { mutableStateOf(true) }
+
+    LaunchedEffect(selectedTerm.value) {
+        isLoading.value = true
+        try {
+            val fetchedTerms = withContext(Dispatchers.IO) {
+                SmithsonianApi.searchTerms(selectedTerm.value)
+            }
+            termsList.clear()
+            termsList.addAll(fetchedTerms)
+        } catch (e: Exception) {
+            termsList.clear()
+        } finally {
+            isLoading.value = false
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            GenerateBackButton(navController)
+            GenerateHomeButton(navController)
+        }
+
+        if (isLoading.value) {
+            Text(text = "Loading...")
+        } else {
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(termsList) { term ->
+                    Text(
+                        text = term,
+                        fontSize = 20.sp,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .clickable {
+
+                            }
+                    )
+                }
+            }
+        }
+    }
+}
+
+
 
 // Composable to generate a clickable rectangle with text
 @Composable
