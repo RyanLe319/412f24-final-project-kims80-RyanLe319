@@ -69,6 +69,10 @@ class MainActivity : ComponentActivity() {
             val trigger = remember { mutableStateOf(true) }
             var status by remember { mutableStateOf("Waiting for search") }
 
+            // This LaunchedEffect triggers everytime the trigger is set to false
+            // It will add more objects to the current objectList and update the status
+            // It will consider the current values of keyword, searchAll, category, and currentRow
+            // After it is done, trigger will be set to true again
             LaunchedEffect(trigger.value) {
                 if(!objectList.isEmpty() && !trigger.value) {
                     scope.launch(Dispatchers.IO) {
@@ -333,7 +337,10 @@ fun GenerateHomeButton(navController: NavController) {
     }
 }
 
-// Composable to display list of objects in a lazy staggered grid
+// This composable will display all objects in objectList with LazyVerticalStaggeredGrid
+// If there are not enough objects to be displayed, it will set the trigger value to false
+// This will cause the LaunchedEffect to update the objectList
+// The composable will automatically recompose itself
 @Composable
 fun DisplayObjects(objectList: SnapshotStateList<SmithsonianObject>,
                    trigger: MutableState<Boolean>
