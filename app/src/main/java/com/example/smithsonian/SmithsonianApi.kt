@@ -43,7 +43,6 @@ class SmithsonianApi {
                             val id = obj.getString("id")
                             val title = obj.getString("title")
                             val image = media.getString("content")
-                            Log.d("777", "Printing URL: $image")
                             val newObject = SmithsonianObject(id = id, title = title, image = image)
                             result.add(newObject)
                         }
