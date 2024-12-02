@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.material3.Button
+import androidx.compose.material3.Label
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -55,12 +56,14 @@ class MainActivity : ComponentActivity() {
             val objectList = remember { mutableStateListOf<SmithsonianObject>() }
             val currentRow = remember { mutableIntStateOf(0) }
             val trigger = remember { mutableStateOf(true) }
+            var status by remember { mutableStateOf("Waiting for search") }
 
             LaunchedEffect(trigger.value) {
                 Log.d("%%%", "Launched!!!")
                 if(!objectList.isEmpty() && !trigger.value) {
                     Log.d("^^^", "Adding more to list")
                     scope.launch(Dispatchers.IO) {
+                        status = "Loading..."
                         if(searchAll) {
                             var result: List<SmithsonianObject>
                             do {
@@ -93,6 +96,7 @@ class MainActivity : ComponentActivity() {
                         Log.d("&&&", "New list size ${objectList.size}")
                         Log.d("###", "Trigger set to true")
                         trigger.value = true
+                        status = "Results:"
                     }
                 }
             }
@@ -106,13 +110,14 @@ class MainActivity : ComponentActivity() {
                 composable(Screens.SEARCH.name) {
                     Column {
                         var tempSearch = true
-                        var tempCategory = ""
+                        var tempCategory by remember { mutableStateOf("All") }
                         var tempKeyword by remember { mutableStateOf("") }
                         // Buttons for choosing category
                         Row {
                             Button(
                                 onClick = {
                                     tempSearch = true
+                                    tempCategory = "All"
                                 }
                             ) {
                                 Text("All")
@@ -151,7 +156,8 @@ class MainActivity : ComponentActivity() {
                                 onValueChange = {
                                     tempKeyword = it
                                 },
-                                placeholder = {Text("Enter search keyword:")}
+                                label = {Text("Category: $tempCategory")},
+                                placeholder = {Text("Enter search keyword")}
                             )
                             Button(
                                 onClick = {
@@ -162,6 +168,7 @@ class MainActivity : ComponentActivity() {
                                     objectList.clear()
                                     // Make sure there is at least one object in the object list for new search
                                     scope.launch(Dispatchers.IO) {
+                                        status = "Loading..."
                                         if(searchAll) {
                                             var result: List<SmithsonianObject>
                                             do {
@@ -191,12 +198,14 @@ class MainActivity : ComponentActivity() {
                                                 objectList.addAll(result)
                                             }
                                         }
+                                        status = "Results:"
                                     }
                                 }
                             ) {
                                 Text("Search")
                             }
                         }
+                        Text(status)
                         // Display of items searched
                         DisplayObjects(objectList, trigger)
                     }
