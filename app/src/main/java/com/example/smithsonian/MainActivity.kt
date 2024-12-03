@@ -56,6 +56,7 @@ enum class Screens {
     SEARCH,
     TERMS,
     SUBTERMS,
+    ITEMS,
     FAVORITES
 }
 val batchSize = 1000
@@ -120,10 +121,36 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            NavHost(navController, startDestination = Screens.SEARCH.name) {
+            NavHost(navController, startDestination = Screens.MAIN.name) {
                 // Main menu with major options
                 composable(Screens.MAIN.name) {
-                    MainScreen(navController = navController)
+                    val buttonColors = listOf(Color.Red, Color.Green, Color.Blue)
+                    val buttonTexts = listOf("Search", "Term", "Favorite")
+                    val destinations = listOf(
+                        Screens.SEARCH.name,
+                        Screens.TERMS.name,
+                        Screens.FAVORITES.name
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Main Screen",
+                            fontSize = 30.sp
+                        )
+                        for (i in buttonColors.indices) {
+                            GenerateClickableRectangle(
+                                text = buttonTexts[i],
+                                color = buttonColors[i],
+                                onClick = { navController.navigate(destinations[i]) }
+                            )
+                        }
+                    }
                 }
                 // Page where you can search for objects within different categories
                 composable(Screens.SEARCH.name) {
@@ -231,14 +258,96 @@ class MainActivity : ComponentActivity() {
                 }
                 // Page where you can search for objects by terms
                 composable(Screens.TERMS.name) {
-                    // Terms screen content
-                    TermScreen(navController = navController, selectedTerm = selectedTerm)
+                    val buttonColors = listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow, Color.Gray)
+                    val buttonTexts = listOf("culture", "data_source", "date", "place", "topic")
+                    val destinations = Screens.SUBTERMS.name
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Terms Screen",
+                            fontSize = 30.sp
+                        )
+                        for (i in buttonColors.indices) {
+                            GenerateClickableRectangle(
+                                text = buttonTexts[i],
+                                color = buttonColors[i],
+                                onClick = {
+                                    selectedTerm.value = buttonTexts[i]
+                                    navController.navigate(Screens.SUBTERMS.name)
+                                }
+                            )
+                        }
+                    }
 
                 }
                 // Page where you can select sub terms to search
                 composable(Screens.SUBTERMS.name) {
-                    // Subterms screen content
-                    SubTermScreen(navController = navController, selectedTerm = selectedTerm)
+                    val termsList = remember { mutableStateListOf<String>() }
+                    val isLoading = remember { mutableStateOf(true) }
+
+                    LaunchedEffect(true) {
+                        isLoading.value = true
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val fetchedTerms = SmithsonianApi.searchTerms(selectedTerm.value)
+                                withContext(Dispatchers.Main) {
+                                    termsList.clear()
+                                    termsList.addAll(fetchedTerms)
+                                }
+                            } catch (e: Exception) {
+                                termsList.clear()
+                            } finally {
+                                isLoading.value = false
+                            }
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            GenerateBackButton(navController)
+                            GenerateHomeButton(navController)
+                        }
+
+                        if (isLoading.value) {
+                            Text(text = "Loading...")
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 16.dp)
+                            ) {
+                                items(termsList) { term ->
+                                    Text(
+                                        text = term,
+                                        fontSize = 20.sp,
+                                        modifier = Modifier
+                                            .padding(8.dp)
+                                            .clickable {
+
+                                            }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                // Page to display the term search objects
+                composable(Screens.ITEMS.name) {
+
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
@@ -248,139 +357,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-// Main Screen with 3 buttons
-@Composable
-fun MainScreen(navController: NavController) {
-    val buttonColors = listOf(Color.Red, Color.Green, Color.Blue)
-    val buttonTexts = listOf("Search", "Term", "Favorite")
-    val destinations = listOf(
-        Screens.SEARCH.name,
-        Screens.TERMS.name,
-        Screens.FAVORITES.name
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceEvenly,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text = "Main Screen",
-            fontSize = 30.sp
-        )
-
-
-        for (i in buttonColors.indices) {
-            GenerateClickableRectangle(
-                text = buttonTexts[i],
-                color = buttonColors[i],
-                onClick = { navController.navigate(destinations[i]) }
-            )
-        }
-
-    }
-}
-
-@Composable
-fun TermScreen(navController: NavController, selectedTerm: MutableState<String>) {
-    val buttonColors = listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow)
-    val buttonTexts = listOf("culture", "data_source", "place", "topic")
-    val destinations = Screens.SUBTERMS.name
-
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceEvenly,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text = "Terms Screen",
-            fontSize = 30.sp
-        )
-
-        for (i in buttonColors.indices) {
-            GenerateClickableRectangle(
-                text = buttonTexts[i],
-                color = buttonColors[i],
-                onClick = {
-                    selectedTerm.value = buttonTexts[i]
-                    navController.navigate(Screens.SUBTERMS.name)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun SubTermScreen(navController: NavController, selectedTerm: MutableState<String>) {
-
-    val termsList = remember { mutableStateListOf<String>() }
-    val isLoading = remember { mutableStateOf(true) }
-
-    LaunchedEffect(selectedTerm.value) {
-        isLoading.value = true
-        try {
-            val fetchedTerms = withContext(Dispatchers.IO) {
-                SmithsonianApi.searchTerms(selectedTerm.value)
-            }
-            termsList.clear()
-            termsList.addAll(fetchedTerms)
-        } catch (e: Exception) {
-            termsList.clear()
-        } finally {
-            isLoading.value = false
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            GenerateBackButton(navController)
-            GenerateHomeButton(navController)
-        }
-
-        if (isLoading.value) {
-            Text(text = "Loading...")
-        } else {
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(termsList) { term ->
-                    Text(
-                        text = term,
-                        fontSize = 20.sp,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .clickable {
-
-                            }
-                    )
-                }
-            }
-        }
-    }
-}
-
-
 
 // Composable to generate a clickable rectangle with text
 @Composable
