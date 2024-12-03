@@ -28,6 +28,11 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -144,6 +149,7 @@ val font = FontFamily(
 
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -283,43 +289,117 @@ class MainActivity : ComponentActivity() {
                                 var tempSearch = true
                                 var tempCategory by remember { mutableStateOf("All") }
                                 var tempKeyword by remember { mutableStateOf("") }
+                                var expanded by remember { mutableStateOf(false) }
+
                                 // Buttons for choosing category
-                                Row {
-                                    Button(
-                                        onClick = {
-                                            tempSearch = true
-                                            tempCategory = "All"
-                                        }
+                                Row (
+                                    modifier = Modifier.fillMaxWidth()
+                                ){
+//                                    Button(
+//                                        onClick = {
+//                                            tempSearch = true
+//                                            tempCategory = "All"
+//                                        },
+//                                        colors = ButtonDefaults.buttonColors(
+//                                            containerColor = uiColor,
+//                                            contentColor = textColor
+//                                        )
+//                                    ) {
+//                                        Text("All")
+//                                    }
+
+                                    ExposedDropdownMenuBox(
+                                        expanded = expanded, // Updated to match variable name
+                                        onExpandedChange = { expanded = !expanded } // Updated to match variable name
                                     ) {
-                                        Text("All")
-                                    }
-                                    Button(
-                                        onClick = {
-                                            tempSearch = false
-                                            tempCategory = "art_design"
+                                        TextField(
+                                            value = when (tempCategory) {
+                                                "art_design" -> "Art Design"
+                                                "history_culture" -> "History Culture"
+                                                "science_technology" -> "Science Technology"
+                                                "All" -> "All"
+                                                else -> "Select Category"
+                                            },
+                                            onValueChange = {}, // No manual input
+                                            readOnly = true,
+                                            label = { Text("Category") },
+                                            trailingIcon = {
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) // Updated to match variable name
+                                            },
+                                            modifier = Modifier.fillMaxWidth().
+                                                        menuAnchor()
+                                        )
+
+                                        // Dropdown menu items
+                                        ExposedDropdownMenu(
+                                            expanded = expanded,
+                                            onDismissRequest = { expanded = false }
+                                        ) {
+                                            listOf(
+                                                "All" to "All",
+                                                "Art Design" to "art_design",
+                                                "History Culture" to "history_culture",
+                                                "Science Technology" to "science_technology"
+                                            ).forEach { (displayText, categoryValue) ->
+                                                DropdownMenuItem(
+                                                    onClick = {
+                                                        if (categoryValue == "All") {
+                                                            tempSearch = true
+                                                        } else {
+                                                            tempSearch = false
+                                                        }
+                                                        tempCategory = categoryValue
+                                                        expanded = false // Updated to match variable name
+                                                    },
+                                                    text = { Text(displayText) }
+                                                )
+                                            }
                                         }
-                                    ) {
-                                        Text("Art Design")
                                     }
-                                }
-                                Row {
-                                    Button(
-                                        onClick = {
-                                            tempSearch = false
-                                            tempCategory = "history_culture"
-                                        }
-                                    ) {
-                                        Text("History Culture")
-                                    }
-                                    Button(
-                                        onClick = {
-                                            tempSearch = false
-                                            tempCategory = "science_technology"
-                                        }
-                                    ) {
-                                        Text("Science Technology")
-                                    }
-                                }
+
+
+
+
+
+//                                    Button(
+//                                        onClick = {
+//                                            tempSearch = false
+//                                            tempCategory = "art_design"
+//                                        },
+//                                        colors = ButtonDefaults.buttonColors(
+//                                            containerColor = uiColor,
+//                                            contentColor = textColor
+//                                        )
+//                                    ) {
+//                                        Text("Art Design")
+//                                    }
+//                                }
+//                                Row {
+//                                    Button(
+//                                        onClick = {
+//                                            tempSearch = false
+//                                            tempCategory = "history_culture"
+//                                        },
+//                                        colors = ButtonDefaults.buttonColors(
+//                                            containerColor = uiColor,
+//                                            contentColor = textColor
+//                                        )
+//                                    ) {
+//                                        Text("History Culture")
+//                                    }
+//                                    Button(
+//                                        onClick = {
+//                                            tempSearch = false
+//                                            tempCategory = "science_technology"
+//                                        },
+//                                        colors = ButtonDefaults.buttonColors(
+//                                            containerColor = uiColor,
+//                                            contentColor = textColor
+//                                        )
+//                                    ) {
+//                                        Text("Science Technology")
+//                                    }
+                               }
                                 // Text field for entering keyword and search button
                                 Row {
                                     TextField(
@@ -371,7 +451,11 @@ class MainActivity : ComponentActivity() {
                                                 }
                                                 status = "Results:"
                                             }
-                                        }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = uiColor,
+                                            contentColor = textColor
+                                        )
                                     ) {
                                         Text("Search")
                                     }
@@ -574,63 +658,73 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Column {
-                        Text(
-                            text = "Favorites",
-                            fontSize = 30.sp,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        if (isLoading.value) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Loading...")
-                            }
-                        } else if (favoritesList.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No Favorites Found")
-                            }
-                        } else {
-                            LazyVerticalStaggeredGrid(
-                                columns = StaggeredGridCells.Fixed(3),
-                                contentPadding = PaddingValues(16.dp)
-                            ) {
-                                items(favoritesList.size) { index ->
-                                    val favorite = favoritesList[index]
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundColor)
+                    ){
+                        Column {
+                            TopBar(true, false, topColor, iconColor, textColor, navController)
+                            Text(
+                                text = "Favorites",
+                                fontSize = 30.sp,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .align(Alignment.CenterHorizontally).
+                                    fillMaxSize()
+                            )
+                            if (isLoading.value) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Loading...")
+                                }
+                            } else if (favoritesList.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No Favorites Found")
+                                }
+                            } else {
+                                LazyVerticalStaggeredGrid(
+                                    columns = StaggeredGridCells.Fixed(3),
+                                    contentPadding = PaddingValues(16.dp)
+                                ) {
+                                    items(favoritesList.size) { index ->
+                                        val favorite = favoritesList[index]
 
-                                    Column(
-                                        modifier = Modifier.padding(8.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = favorite.image,
-                                            contentDescription = favorite.title,
-                                            placeholder = painterResource(R.drawable.placeholder),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
+                                        Column(
+                                            modifier = Modifier.padding(8.dp)
+                                        ) {
+                                            AsyncImage(
+                                                model = favorite.image,
+                                                contentDescription = favorite.title,
+                                                placeholder = painterResource(R.drawable.placeholder),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
 
-                                        )
-                                        Text(
-                                            text = favorite.title,
+                                            )
+                                            Text(
+                                                text = favorite.title,
 
-                                        )
-                                        Button(onClick = {
+                                                )
+                                            Button(onClick = {
 
-                                            dbman.deleteObject(favorite.title)
-                                            favoritesList.removeAt(index)
-                                        }) {
-                                            Text("Delete")
+                                                dbman.deleteObject(favorite.title)
+                                                favoritesList.removeAt(index)
+                                            }) {
+                                                Text("Delete")
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
+
+
                 }
 
 
