@@ -1,5 +1,8 @@
 package com.example.smithsonian
 
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -43,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -65,6 +69,63 @@ enum class Screens {
 }
 val batchSize = 1000
 
+class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
+
+    override fun onCreate(db: SQLiteDatabase?) {
+        db?.execSQL("""
+            CREATE TABLE IF NOT EXISTS SMITHSONIAN_OBJECTS (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                title TEXT UNIQUE,  -- Enforce uniqueness on the 'title' column
+                imageUrl TEXT
+            )
+        """)
+    }
+
+    override fun onUpgrade(p0: SQLiteDatabase?, p1: Int, p2: Int) {
+        TODO("Not yet implemented")
+    }
+
+    // Check if an object already exists in the database
+    fun isObjectExists(title: String): Boolean {
+        val query = "SELECT 1 FROM SMITHSONIAN_OBJECTS WHERE title = ?"
+        val cursor = readableDatabase.rawQuery(query, arrayOf(title))
+        val exists = cursor.moveToFirst()
+        cursor.close()
+        return exists
+    }
+
+    // Insert a SmithsonianObject only if it doesn't already exist
+    fun insertObject(smithsonianObject: SmithsonianObject) {
+        if (!isObjectExists(smithsonianObject.title)) { // Check for duplicates
+            val query = "INSERT INTO SMITHSONIAN_OBJECTS (title, imageUrl) VALUES(?, ?)"
+            val statement = writableDatabase.compileStatement(query)
+            statement.bindString(1, smithsonianObject.title)
+            statement.bindString(2, smithsonianObject.image)
+            statement.executeInsert()
+        } else {
+            Log.d("DatabaseManager", "Object with title '${smithsonianObject.title}' already exists.")
+        }
+    }
+
+    fun clearDatabase() {
+        val db = writableDatabase
+        db.execSQL("DELETE FROM SMITHSONIAN_OBJECTS") // Deletes all rows in the table
+        db.close()
+    }
+
+    fun deleteObject(title: String){
+        if(isObjectExists(title)){
+            val query = "DELETE FROM SMITHSONIAN_OBJECTS WHERE title = ?"
+            val statement = writableDatabase.compileStatement(query)
+            statement.bindString(1, title)
+            statement.executeUpdateDelete()
+        }
+    }
+
+
+}
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,6 +141,7 @@ class MainActivity : ComponentActivity() {
             val trigger = remember { mutableStateOf(true) }
             var status by remember { mutableStateOf("Waiting for search") }
             var selectedTerm: MutableState<String> =  remember { mutableStateOf("") }
+            val dbman = MyDatabaseManager(this)
 
 
             // This LaunchedEffect triggers everytime the trigger is set to false
@@ -87,6 +149,7 @@ class MainActivity : ComponentActivity() {
             // It will consider the current values of keyword, searchAll, category, and currentRow
             // After it is done, trigger will be set to true again
             LaunchedEffect(trigger.value) {
+
                 if(!objectList.isEmpty() && !trigger.value) {
                     scope.launch(Dispatchers.IO) {
                         status = "Loading..."
@@ -164,6 +227,13 @@ class MainActivity : ComponentActivity() {
                         var tempKeyword by remember { mutableStateOf("") }
                         // Buttons for choosing category
                         Row {
+                            Button(
+                                onClick = {
+                                    navController.navigate(Screens.MAIN.name)
+                                }
+                            ){
+                                Text(text ="Back")
+                            }
                             Button(
                                 onClick = {
                                     tempSearch = true
@@ -257,7 +327,7 @@ class MainActivity : ComponentActivity() {
                         }
                         Text(status)
                         // Display of items searched
-                        DisplayObjects(objectList, trigger)
+                        DisplayObjects(objectList, trigger, dbman)
                     }
                 }
                 // Page where you can search for objects by terms
@@ -388,13 +458,100 @@ class MainActivity : ComponentActivity() {
                     // Display
                     Column {
                         Text(status)
-                        DisplayObjects(objectList, trigger)
+                        DisplayObjects(objectList, trigger, dbman)
                     }
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
-                    // Favorites screen content
+                    val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
+                    val isLoading = remember { mutableStateOf(true) }
+
+                    // Fetch data from the database when the Favorites screen is displayed
+                    LaunchedEffect(Unit) {
+                        isLoading.value = true
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val cursor = dbman.readableDatabase.rawQuery("SELECT * FROM SMITHSONIAN_OBJECTS", null)
+                                val fetchedFavorites = mutableListOf<SmithsonianObject>()
+                                while (cursor.moveToNext()) {
+                                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
+                                    val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
+                                    val imageUrl = cursor.getString(cursor.getColumnIndexOrThrow("imageUrl"))
+                                    fetchedFavorites.add(SmithsonianObject(id = id.toString(), title = title, image = imageUrl))
+                                }
+                                cursor.close()
+
+                                withContext(Dispatchers.Main) {
+                                    favoritesList.clear()
+                                    favoritesList.addAll(fetchedFavorites)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            } finally {
+                                isLoading.value = false
+                            }
+                        }
+                    }
+
+                    Column {
+                        Text(
+                            text = "Favorites",
+                            fontSize = 30.sp,
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .align(Alignment.CenterHorizontally)
+                        )
+                        if (isLoading.value) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Loading...")
+                            }
+                        } else if (favoritesList.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No Favorites Found")
+                            }
+                        } else {
+                            LazyVerticalStaggeredGrid(
+                                columns = StaggeredGridCells.Fixed(3),
+                                contentPadding = PaddingValues(16.dp)
+                            ) {
+                                items(favoritesList.size) { index ->
+                                    val favorite = favoritesList[index]
+
+                                    Column(
+                                        modifier = Modifier.padding(8.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = favorite.image,
+                                            contentDescription = favorite.title,
+                                            placeholder = painterResource(R.drawable.placeholder),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+
+                                        )
+                                        Text(
+                                            text = favorite.title,
+
+                                        )
+                                        Button(onClick = {
+
+                                            dbman.deleteObject(favorite.title)
+                                            favoritesList.removeAt(index)
+                                        }) {
+                                            Text("Delete")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+
             }
         }
     }
@@ -463,21 +620,20 @@ fun GenerateHomeButton(navController: NavController) {
     }
 }
 
-// This composable will display all objects in objectList with LazyVerticalStaggeredGrid
-// If there are not enough objects to be displayed, it will set the trigger value to false
-// This will cause the LaunchedEffect to update the objectList
-// The composable will automatically recompose itself
 @Composable
-fun DisplayObjects(objectList: SnapshotStateList<SmithsonianObject>,
-                   trigger: MutableState<Boolean>
+fun DisplayObjects(
+    objectList: SnapshotStateList<SmithsonianObject>,
+    trigger: MutableState<Boolean>,
+    dbman: MyDatabaseManager
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
     ) {
-        items(objectList.size) {index ->
-            if(index == objectList.size - 1 && trigger.value) {
+        items(objectList.size) { index ->
+            if (index == objectList.size - 1 && trigger.value) {
                 trigger.value = false
             }
+
             Column {
                 AsyncImage(
                     model = objectList[index].image,
@@ -485,10 +641,22 @@ fun DisplayObjects(objectList: SnapshotStateList<SmithsonianObject>,
                     placeholder = painterResource(R.drawable.placeholder)
                 )
                 Text(objectList[index].title)
+
+                Button(onClick = {
+                    val objectToFavorite = SmithsonianObject(
+                        id = "",
+                        title = objectList[index].title,
+                        image = objectList[index].image
+                    )
+                    dbman.insertObject(objectToFavorite)
+                }) {
+                    Text("Favorite")
+                }
             }
         }
     }
 }
+
 
 // Composable to display a list of term options for a term category
 @Composable
