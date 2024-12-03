@@ -522,10 +522,24 @@ class MainActivity : ComponentActivity() {
                             status = "Results:"
                         }
                     }
-                    // Display
-                    Column {
-                        Text(status)
-                        DisplayObjects(objectList, trigger, dbman)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundColor)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            TopBar(true, true, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp)
+                            ) {
+                                Text(status)
+                                DisplayObjects(objectList, trigger, dbman)
+                            }
+                        }
                     }
                 }
                 // Page where you can see objects that were added to favorites
