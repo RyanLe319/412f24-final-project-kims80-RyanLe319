@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +24,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,12 +51,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.dp
@@ -167,14 +172,30 @@ class MainActivity : ComponentActivity() {
             val dbman = MyDatabaseManager(this)
 
             // Color stuff
+            val allColors = arrayOf(
+                R.color.Primary1, R.color.Primary2, R.color.Primary3, R.color.Secondary1,
+                R.color.Secondary2, R.color.Secondary3, R.color.Secondary4, R.color.Secondary5,
+                R.color.Tertiary1, R.color.Tertiary2, R.color.Tertiary3, R.color.Tertiary4,
+                R.color.Tertiary5, R.color.Tertiary6
+
+            )
+            val darkMode = arrayOf(
+                R.color.Tertiary1,
+                R.color.Primary2,
+                R.color.Primary1,
+                R.color.Tertiary2,
+                R.color.Primary3
+            )
+            val lightMode = arrayOf(
+                R.color.Tertiary4,
+                R.color.Tertiary1,
+                R.color.Primary1,
+                R.color.Tertiary5,
+                R.color.Tertiary6,
+            )
+            // Initailly dark mode
             val currentColors = remember {
-                mutableStateListOf(
-                    R.color.Tertiary1,
-                    R.color.Primary2,
-                    R.color.Primary1,
-                    R.color.Tertiary2,
-                    R.color.Primary3
-                )
+                mutableStateListOf(*darkMode)
             }
             val backgroundColor = colorResource(currentColors[0])
             val textColor = colorResource(currentColors[1])
@@ -462,7 +483,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 Text(status)
                                 // Display of items searched
-                                DisplayObjects(objectList, trigger, dbman)
+                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor)
                             }
                         }
                     }
@@ -558,12 +579,13 @@ class MainActivity : ComponentActivity() {
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(16.dp))
-                                                    .background(Color.LightGray)
+                                                    .background(uiColor)
                                                     .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
                                             ) {
                                                 Text(
                                                     text = term,
                                                     fontSize = 20.sp,
+                                                    fontFamily = font,
                                                     modifier = Modifier
                                                         .padding(8.dp)
                                                         .clickable {
@@ -574,7 +596,8 @@ class MainActivity : ComponentActivity() {
                                                             navController.navigate(Screens.ITEMS.name)
                                                         }
                                                         .fillParentMaxWidth()
-                                                        .padding(5.dp)
+                                                        .padding(5.dp),
+                                                    color = textColor
                                                 )
                                             }
                                             Spacer(modifier = Modifier.height(5.dp))
@@ -618,10 +641,9 @@ class MainActivity : ComponentActivity() {
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(16.dp)
                             ) {
                                 Text(status)
-                                DisplayObjects(objectList, trigger, dbman)
+                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor)
                             }
                         }
                     }
@@ -730,6 +752,96 @@ class MainActivity : ComponentActivity() {
 
                 // Page where you can choose app color scheme
                 composable(Screens.COLORS.name) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(backgroundColor)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            TopBar(true, true, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                            ) {
+                                // Choose between two preset color scheme
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            currentColors.clear()
+                                            currentColors.addAll(darkMode)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = uiColor,
+                                            contentColor = textColor
+                                        ),
+                                        modifier = Modifier.padding(10.dp)
+                                    ) {
+                                        Text("Dark Mode", fontFamily = font, fontSize = 24.sp, color = textColor)
+                                    }
+                                    Button(
+                                        onClick = {
+                                            currentColors.clear()
+                                            currentColors.addAll(lightMode)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = uiColor,
+                                            contentColor = textColor
+                                        ),
+                                        modifier = Modifier.padding(10.dp)
+                                    ) {
+                                        Text("Light Mode", fontFamily = font, fontSize = 24.sp, color = textColor)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(5.dp))
+                                // Choose custom colors here
+                                Box(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .background(uiColor)
+                                        .padding(15.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        // Choose color for each element
+                                        val colorList = listOf("Background", "Text", "Icon", "UI", "Top")
+                                        for(i in colorList.indices) {
+                                            Text(colorList[i],
+                                                fontFamily = font,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 24.sp,
+                                                color = textColor,
+                                                modifier = Modifier.padding(5.dp)
+                                            )
+                                            val scrollState = rememberScrollState()
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .horizontalScroll(scrollState),
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                            ) {
+                                                // Color choices
+                                                for(j in allColors.indices) {
+                                                    Box(
+                                                        modifier = Modifier.size(50.dp)
+                                                            .background(colorResource(allColors[j]))
+                                                            .border(BorderStroke(2.dp, Color.Black))
+                                                            .clickable(
+                                                                onClick = {
+                                                                    currentColors[i] = allColors[j]
+                                                                }
+                                                            )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -839,6 +951,19 @@ fun TopBar(back: Boolean, home: Boolean, topColor: Color, iconColor: Color, text
                 if(home) {
                     GenerateHomeButton(navController, iconColor)
                 }
+                IconButton(
+                    onClick = {
+                        navController.navigate(Screens.COLORS.name)
+                    },
+                    modifier = Modifier.fillMaxHeight()
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.settings_button),
+                        contentDescription = "Settings Button",
+                        tint = iconColor,
+                        modifier = Modifier.fillMaxHeight()
+                    )
+                }
             }
         }
     }
@@ -848,7 +973,9 @@ fun TopBar(back: Boolean, home: Boolean, topColor: Color, iconColor: Color, text
 fun DisplayObjects(
     objectList: SnapshotStateList<SmithsonianObject>,
     trigger: MutableState<Boolean>,
-    dbman: MyDatabaseManager
+    dbman: MyDatabaseManager,
+    uiColor: Color,
+    textColor: Color
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
@@ -857,24 +984,30 @@ fun DisplayObjects(
             if (index == objectList.size - 1 && trigger.value) {
                 trigger.value = false
             }
-
-            Column {
-                AsyncImage(
-                    model = objectList[index].image,
-                    contentDescription = objectList[index].title,
-                    placeholder = painterResource(R.drawable.placeholder)
-                )
-                Text(objectList[index].title)
-
-                Button(onClick = {
-                    val objectToFavorite = SmithsonianObject(
-                        id = "",
-                        title = objectList[index].title,
-                        image = objectList[index].image
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(uiColor)
+                    .padding(1.dp)
+            ) {
+                Column {
+                    AsyncImage(
+                        model = objectList[index].image,
+                        contentDescription = objectList[index].title,
+                        placeholder = painterResource(R.drawable.placeholder)
                     )
-                    dbman.insertObject(objectToFavorite)
-                }) {
-                    Text("Favorite")
+                    Text(objectList[index].title,
+                        fontFamily = font,
+                        fontSize = 16.sp,
+                        color = textColor,
+                        modifier = Modifier.padding(5.dp)
+                    )
+//                    Button(
+//                        onClick = {
+//                            dbman.insertObject(objectList[index])
+//                        }
+//                    ) {
+//                        Text("Favorite", fontFamily = font, color = textColor)
+//                    }
                 }
             }
         }
