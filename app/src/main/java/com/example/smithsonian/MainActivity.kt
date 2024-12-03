@@ -21,14 +21,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -47,10 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-
 import androidx.compose.ui.res.colorResource
-
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -165,16 +163,18 @@ class MainActivity : ComponentActivity() {
             // Color stuff
             val currentColors = remember {
                 mutableStateListOf(
-                R.color.Tertiary1,
-                R.color.Primary2,
-                R.color.Primary1,
-                R.color.Tertiary2,
+                    R.color.Tertiary1,
+                    R.color.Primary2,
+                    R.color.Primary1,
+                    R.color.Tertiary2,
+                    R.color.Primary3
                 )
             }
             val backgroundColor = colorResource(currentColors[0])
             val textColor = colorResource(currentColors[1])
             val iconColor = colorResource(currentColors[2])
             val uiColor = colorResource(currentColors[3])
+            val topColor = colorResource(currentColors[4])
 
             // This LaunchedEffect triggers everytime the trigger is set to false
             // It will add more objects to the current objectList and update the status
@@ -234,29 +234,33 @@ class MainActivity : ComponentActivity() {
                             Screens.TERMS.name,
                             Screens.FAVORITES.name
                         )
-
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceEvenly,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            Text(
-                                text = "Smithsonian Institution Open Access",
-                                fontSize = 64.sp,
-                                color = textColor,
-                                fontFamily = font,
-                                fontWeight = FontWeight.Bold
-                            )
-                            for (i in buttonTexts.indices) {
-                                GenerateClickableRectangle(
-                                    text = buttonTexts[i],
-                                    buttonColor = uiColor,
-                                    textColor = textColor,
-                                    font = font,
-                                    onClick = { navController.navigate(destinations[i]) }
+                            TopBar(false, false, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .weight(1f),
+                                verticalArrangement = Arrangement.SpaceEvenly,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Smithsonian Institution Open Access",
+                                    fontSize = 64.sp,
+                                    color = textColor,
+                                    fontFamily = font,
+                                    fontWeight = FontWeight.Bold
                                 )
+                                for (i in buttonTexts.indices) {
+                                    GenerateClickableRectangle(
+                                        text = buttonTexts[i],
+                                        buttonColor = uiColor,
+                                        textColor = textColor,
+                                        font = font,
+                                        onClick = { navController.navigate(destinations[i]) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -269,112 +273,114 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(backgroundColor)
                     ) {
-                        Column {
-                            var tempSearch = true
-                            var tempCategory by remember { mutableStateOf("All") }
-                            var tempKeyword by remember { mutableStateOf("") }
-                            // Buttons for choosing category
-                            Row {
-                                Button(
-                                    onClick = {
-                                        tempSearch = true
-                                        tempCategory = "All"
-                                    }
-                                ) {
-                                    Text("All")
-                                }
-                                Button(
-                                    onClick = {
-                                        tempSearch = false
-                                        tempCategory = "art_design"
-                                    }
-                                ) {
-                                    Text("Art Design")
-                                }
-                            }
-                            Row {
-                                Button(
-                                    onClick = {
-                                        tempSearch = false
-                                        tempCategory = "history_culture"
-                                    }
-                                ) {
-                                    Text("History Culture")
-                                }
-                                Button(
-                                    onClick = {
-                                        tempSearch = false
-                                        tempCategory = "science_technology"
-                                    }
-                                ) {
-                                    Text("Science Technology")
-                                }
-                            }
-                            // Text field for entering keyword and search button
-                            Row {
-                                TextField(
-                                    value = tempKeyword,
-                                    onValueChange = {
-                                        tempKeyword = it
-                                    },
-                                    label = {Text("Category: $tempCategory")},
-                                    placeholder = {Text("Enter search keyword")}
-                                )
-                                Button(
-                                    onClick = {
-                                        searchAll = tempSearch
-                                        category = tempCategory
-                                        keyword = tempKeyword
-                                        currentRow.intValue = 0
-                                        objectList.clear()
-                                        // Make sure there is at least one object in the object list for new search
-                                        scope.launch(Dispatchers.IO) {
-                                            status = "Loading..."
-                                            if(searchAll) {
-                                                var result: List<SmithsonianObject>
-                                                do {
-                                                    result = SmithsonianApi.searchGeneral(
-                                                        keyword = keyword,
-                                                        start = currentRow.intValue,
-                                                        rows = batchSize
-                                                    )
-                                                    currentRow.intValue += batchSize
-                                                } while (result.isEmpty())
-                                                withContext(Dispatchers.Main) {
-                                                    objectList.addAll(result)
-                                                }
-                                            }
-                                            else {
-                                                var result: List<SmithsonianObject>
-                                                do {
-                                                    result = SmithsonianApi.searchCategory(
-                                                        keyword = keyword,
-                                                        category = category,
-                                                        start = currentRow.intValue,
-                                                        rows = batchSize
-                                                    )
-                                                    currentRow.intValue += batchSize
-                                                } while (result.isEmpty())
-                                                withContext(Dispatchers.Main) {
-                                                    objectList.addAll(result)
-                                                }
-                                            }
-                                            status = "Results:"
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            TopBar(true, false, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                var tempSearch = true
+                                var tempCategory by remember { mutableStateOf("All") }
+                                var tempKeyword by remember { mutableStateOf("") }
+                                // Buttons for choosing category
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            tempSearch = true
+                                            tempCategory = "All"
                                         }
+                                    ) {
+                                        Text("All")
                                     }
-                                ) {
-                                    Text("Search")
+                                    Button(
+                                        onClick = {
+                                            tempSearch = false
+                                            tempCategory = "art_design"
+                                        }
+                                    ) {
+                                        Text("Art Design")
+                                    }
                                 }
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            tempSearch = false
+                                            tempCategory = "history_culture"
+                                        }
+                                    ) {
+                                        Text("History Culture")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            tempSearch = false
+                                            tempCategory = "science_technology"
+                                        }
+                                    ) {
+                                        Text("Science Technology")
+                                    }
+                                }
+                                // Text field for entering keyword and search button
+                                Row {
+                                    TextField(
+                                        value = tempKeyword,
+                                        onValueChange = {
+                                            tempKeyword = it
+                                        },
+                                        label = {Text("Category: $tempCategory")},
+                                        placeholder = {Text("Enter search keyword")}
+                                    )
+                                    Button(
+                                        onClick = {
+                                            searchAll = tempSearch
+                                            category = tempCategory
+                                            keyword = tempKeyword
+                                            currentRow.intValue = 0
+                                            objectList.clear()
+                                            // Make sure there is at least one object in the object list for new search
+                                            scope.launch(Dispatchers.IO) {
+                                                status = "Loading..."
+                                                if(searchAll) {
+                                                    var result: List<SmithsonianObject>
+                                                    do {
+                                                        result = SmithsonianApi.searchGeneral(
+                                                            keyword = keyword,
+                                                            start = currentRow.intValue,
+                                                            rows = batchSize
+                                                        )
+                                                        currentRow.intValue += batchSize
+                                                    } while (result.isEmpty())
+                                                    withContext(Dispatchers.Main) {
+                                                        objectList.addAll(result)
+                                                    }
+                                                }
+                                                else {
+                                                    var result: List<SmithsonianObject>
+                                                    do {
+                                                        result = SmithsonianApi.searchCategory(
+                                                            keyword = keyword,
+                                                            category = category,
+                                                            start = currentRow.intValue,
+                                                            rows = batchSize
+                                                        )
+                                                        currentRow.intValue += batchSize
+                                                    } while (result.isEmpty())
+                                                    withContext(Dispatchers.Main) {
+                                                        objectList.addAll(result)
+                                                    }
+                                                }
+                                                status = "Results:"
+                                            }
+                                        }
+                                    ) {
+                                        Text("Search")
+                                    }
+                                }
+                                Text(status)
+                                // Display of items searched
+                                DisplayObjects(objectList, trigger, dbman)
                             }
-                            Text(status)
-                            // Display of items searched
-                            DisplayObjects(objectList, trigger)
                         }
-
-                        Text(status)
-                        // Display of items searched
-                        DisplayObjects(objectList, trigger, dbman)
-
                     }
                 }
                 // Page where you can search for objects by terms
@@ -386,30 +392,35 @@ class MainActivity : ComponentActivity() {
                             .background(backgroundColor)
                     ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceEvenly,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            Text(
-                                text = "Choose a term category",
-                                fontSize = 64.sp,
-                                color = textColor,
-                                fontFamily = font,
-                                fontWeight = FontWeight.Bold
-                            )
-                            for (i in buttonTexts.indices) {
-                                GenerateClickableRectangle(
-                                    text = buttonTexts[i],
-                                    buttonColor = uiColor,
-                                    textColor = textColor,
-                                    font = font,
-                                    onClick = {
-                                        selectedTerm.value = buttonTexts[i]
-                                        navController.navigate(Screens.SUBTERMS.name)
-                                    }
+                            TopBar(true, false, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.SpaceEvenly,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Choose a term category",
+                                    fontSize = 64.sp,
+                                    color = textColor,
+                                    fontFamily = font,
+                                    fontWeight = FontWeight.Bold
                                 )
+                                for (i in buttonTexts.indices) {
+                                    GenerateClickableRectangle(
+                                        text = buttonTexts[i],
+                                        buttonColor = uiColor,
+                                        textColor = textColor,
+                                        font = font,
+                                        onClick = {
+                                            selectedTerm.value = buttonTexts[i]
+                                            navController.navigate(Screens.SUBTERMS.name)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -440,54 +451,50 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(backgroundColor)
                     ) {
-
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Top,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                            TopBar(true, true, topColor, iconColor, textColor, navController)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Top,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                GenerateBackButton(navController)
-                                GenerateHomeButton(navController)
-                            }
-
-                            if (isLoading.value) {
-                                Text(text = "Loading...")
-                            }
-                            else {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(bottom = 16.dp)
-                                ) {
-                                    items(termsList) { term ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(Color.LightGray)
-                                                .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
-                                        ) {
-                                            Text(
-                                                text = term,
-                                                fontSize = 20.sp,
+                                if (isLoading.value) {
+                                    Text(text = "Loading...")
+                                }
+                                else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 16.dp)
+                                    ) {
+                                        items(termsList) { term ->
+                                            Box(
                                                 modifier = Modifier
-                                                    .padding(8.dp)
-                                                    .clickable {
-                                                        keyword = term
-                                                        searchAll = true
-                                                        currentRow.intValue = 0
-                                                        objectList.clear()
-                                                        navController.navigate(Screens.ITEMS.name)
-                                                    }
-                                                    .fillParentMaxWidth()
-                                                    .padding(5.dp)
-                                            )
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(Color.LightGray)
+                                                    .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
+                                            ) {
+                                                Text(
+                                                    text = term,
+                                                    fontSize = 20.sp,
+                                                    modifier = Modifier
+                                                        .padding(8.dp)
+                                                        .clickable {
+                                                            keyword = term
+                                                            searchAll = true
+                                                            currentRow.intValue = 0
+                                                            objectList.clear()
+                                                            navController.navigate(Screens.ITEMS.name)
+                                                        }
+                                                        .fillParentMaxWidth()
+                                                        .padding(5.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(5.dp))
                                         }
-                                        Spacer(modifier = Modifier.height(5.dp))
                                     }
                                 }
                             }
@@ -645,45 +652,87 @@ fun GenerateClickableRectangle(text: String, buttonColor: Color, textColor: Colo
 
 // Composable for Back button
 @Composable
-fun GenerateBackButton(navController: NavController) {
-    Box(
-        modifier = Modifier
-            .width(90.dp)
-            .height(45.dp)
-            .background(Color.Gray)
-            .clickable {
-                if (navController.previousBackStackEntry != null) {
-                    navController.popBackStack()
-                }
-            },
-        contentAlignment = Alignment.Center
+fun GenerateBackButton(navController: NavController, iconColor: Color) {
+    IconButton(
+        onClick = {
+            if(navController.previousBackStackEntry != null) {
+                navController.popBackStack()
+            }
+        },
+        modifier = Modifier.fillMaxHeight()
     ) {
-        Text(
-            text = "Back",
-            color = Color.White,
-            fontSize = 18.sp
+        Icon(
+            painter = painterResource(R.drawable.back_button),
+            contentDescription = "Back Button",
+            tint = iconColor,
+            modifier = Modifier.fillMaxHeight()
         )
     }
 }
 
 // Composable for Home button
 @Composable
-fun GenerateHomeButton(navController: NavController) {
+fun GenerateHomeButton(navController: NavController, iconColor: Color) {
+    IconButton(
+        onClick = {
+                navController.navigate(Screens.MAIN.name)
+        },
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.home_button),
+            contentDescription = "Home Button",
+            tint = iconColor,
+            modifier = Modifier.fillMaxHeight()
+        )
+    }
+}
+
+// Top bar for each page
+@Composable
+fun TopBar(back: Boolean, home: Boolean, topColor: Color, iconColor: Color, textColor: Color, navController: NavController) {
     Box(
         modifier = Modifier
-            .width(90.dp)
-            .height(45.dp)
-            .background(Color.Gray)
-            .clickable {
-                navController.navigate(Screens.MAIN.name)
-            },
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .background(topColor)
+            .height(60.dp)
     ) {
-        Text(
-            text = "Home",
-            color = Color.White,
-            fontSize = 18.sp
-        )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.width(100.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                if(back) {
+                    GenerateBackButton(navController, iconColor)
+                }
+            }
+            Row(
+                modifier = Modifier.width(150.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.smithsonianlogo),
+                    contentDescription = "Smithsonian Logo",
+                    tint = Color.Unspecified,
+                    modifier = Modifier.fillMaxHeight()
+                        .padding(10.dp)
+
+                )
+                Text("Smithsonian Institute", fontFamily = font, fontSize = 16.sp, color = textColor)
+            }
+            Row(
+                modifier = Modifier.width(100.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                if(home) {
+                    GenerateHomeButton(navController, iconColor)
+                }
+            }
+        }
     }
 }
 
