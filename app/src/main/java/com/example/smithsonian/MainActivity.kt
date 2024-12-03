@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,11 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -38,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -325,21 +329,36 @@ class MainActivity : ComponentActivity() {
 
                         if (isLoading.value) {
                             Text(text = "Loading...")
-                        } else {
+                        }
+                        else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(bottom = 16.dp)
                             ) {
                                 items(termsList) { term ->
-                                    Text(
-                                        text = term,
-                                        fontSize = 20.sp,
+                                    Box(
                                         modifier = Modifier
-                                            .padding(8.dp)
-                                            .clickable {
-
-                                            }
-                                    )
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(Color.LightGray)
+                                            .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
+                                    ) {
+                                        Text(
+                                            text = term,
+                                            fontSize = 20.sp,
+                                            modifier = Modifier
+                                                .padding(8.dp)
+                                                .clickable {
+                                                    keyword = term
+                                                    searchAll = true
+                                                    currentRow.intValue = 0
+                                                    objectList.clear()
+                                                    navController.navigate(Screens.ITEMS.name)
+                                                }
+                                                .fillParentMaxWidth()
+                                                .padding(5.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(5.dp))
                                 }
                             }
                         }
@@ -347,7 +366,30 @@ class MainActivity : ComponentActivity() {
                 }
                 // Page to display the term search objects
                 composable(Screens.ITEMS.name) {
-
+                    // Add some initial objects
+                    LaunchedEffect(true) {
+                        scope.launch(Dispatchers.IO) {
+                            status = "Loading..."
+                            var result: List<SmithsonianObject>
+                            do {
+                                result = SmithsonianApi.searchGeneral(
+                                    keyword = keyword,
+                                    start = currentRow.intValue,
+                                    rows = batchSize
+                                )
+                                currentRow.intValue += batchSize
+                            } while (result.isEmpty())
+                            withContext(Dispatchers.Main) {
+                                objectList.addAll(result)
+                            }
+                            status = "Results:"
+                        }
+                    }
+                    // Display
+                    Column {
+                        Text(status)
+                        DisplayObjects(objectList, trigger)
+                    }
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
