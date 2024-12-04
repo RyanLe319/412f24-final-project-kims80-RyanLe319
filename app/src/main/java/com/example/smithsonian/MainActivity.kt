@@ -34,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -977,6 +979,9 @@ fun DisplayObjects(
     uiColor: Color,
     textColor: Color
 ) {
+    val show = rememberSaveable { mutableStateOf(false) }
+    val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
+
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
     ) {
@@ -988,6 +993,10 @@ fun DisplayObjects(
                 modifier = Modifier.fillMaxSize()
                     .background(uiColor)
                     .padding(1.dp)
+                    .clickable {
+                        show.value = true
+                        selection.value = objectList[index]
+                    }
             ) {
                 Column {
                     AsyncImage(
@@ -1012,6 +1021,14 @@ fun DisplayObjects(
             }
         }
     }
+    if(show.value) {
+        DisplayDialogue(
+            onDismissRequest = {show.value = false},
+            selection.value,
+            textColor,
+            uiColor
+        )
+    }
 }
 
 
@@ -1023,6 +1040,26 @@ fun DisplayTermOptions(termList: List<String>) {
 
 // Composable to display a dialogue for each Smithsonian object
 @Composable
-fun DisplayDialogue(onDismissRequest: () -> Unit, obj: SmithsonianObject) {
+fun DisplayDialogue(onDismissRequest: () -> Unit, obj: SmithsonianObject?, textColor: Color, uiColor: Color) {
+    if(obj == null) {
+        onDismissRequest()
+    }
+    Dialog(onDismissRequest = {onDismissRequest()}) {
+        Card(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier.background(uiColor)
+            ) {
+                AsyncImage(
+                    model = obj!!.image,
+                    contentDescription = obj.title,
+                    placeholder = painterResource(R.drawable.placeholder)
+                )
+                Text("ID: ${obj.id}", fontSize = 24.sp, fontFamily = font, color = textColor)
+                Text("Title: ${obj.title}", fontSize = 24.sp, fontFamily = font, color = textColor)
 
+            }
+        }
+    }
 }
