@@ -10,8 +10,7 @@ data class SmithsonianObject(
     val title: String,
     val image: String,
     val date: String,
-    val name: String,
-    val notes: String
+    val name: String
 
 )
 
@@ -49,8 +48,7 @@ class SmithsonianApi {
                             val freetext = content.getJSONObject("freetext")
                             val date = (freetext.getJSONArray("date")[0] as JSONObject).getString("content")
                             val name = (freetext.getJSONArray("name")[0] as JSONObject).getString("content")
-                            val notes = (freetext.getJSONArray("notes")[0] as JSONObject).getString("content")
-                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name, notes = notes)
+                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name)
                             result.add(newObject)
                         }
                         else {
@@ -97,8 +95,7 @@ class SmithsonianApi {
                             val freetext = content.getJSONObject("freetext")
                             val date = (freetext.getJSONArray("date")[0] as JSONObject).getString("content")
                             val name = (freetext.getJSONArray("name")[0] as JSONObject).getString("content")
-                            val notes = (freetext.getJSONArray("notes")[0] as JSONObject).getString("content")
-                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name, notes = notes)
+                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name)
                             result.add(newObject)
                         }
                         else {
