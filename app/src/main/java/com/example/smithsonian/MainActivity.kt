@@ -1032,6 +1032,9 @@ fun DisplayDialogue(
                 )
                 Text("ID: ${obj.id}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Title: ${obj.title}", fontSize = 24.sp, fontFamily = font, color = textColor)
+                Text("Date: ${obj.date}", fontSize = 24.sp, fontFamily = font, color = textColor)
+                Text("Author: ${obj.name}", fontSize = 24.sp, fontFamily = font, color = textColor)
+                Text("Notes: ${obj.notes}", fontSize = 24.sp, fontFamily = font, color = textColor)
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
