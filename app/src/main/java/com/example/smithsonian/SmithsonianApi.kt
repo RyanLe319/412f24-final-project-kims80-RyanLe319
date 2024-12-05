@@ -9,6 +9,9 @@ data class SmithsonianObject(
     val id: String,
     val title: String,
     val image: String,
+    val date: String,
+    val name: String,
+    val notes: String
 
 )
 
@@ -43,7 +46,11 @@ class SmithsonianApi {
                             val id = obj.getString("id")
                             val title = obj.getString("title")
                             val image = media.getString("content")
-                            val newObject = SmithsonianObject(id = id, title = title, image = image)
+                            val freetext = content.getJSONObject("freetext")
+                            val date = (freetext.getJSONArray("date")[0] as JSONObject).getString("content")
+                            val name = (freetext.getJSONArray("name")[0] as JSONObject).getString("content")
+                            val notes = (freetext.getJSONArray("notes")[0] as JSONObject).getString("content")
+                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name, notes = notes)
                             result.add(newObject)
                         }
                         else {
@@ -87,7 +94,11 @@ class SmithsonianApi {
                             val id = obj.getString("id")
                             val title = obj.getString("title")
                             val image = media.getString("content")
-                            val newObject = SmithsonianObject(id = id, title = title, image = image)
+                            val freetext = content.getJSONObject("freetext")
+                            val date = (freetext.getJSONArray("date")[0] as JSONObject).getString("content")
+                            val name = (freetext.getJSONArray("name")[0] as JSONObject).getString("content")
+                            val notes = (freetext.getJSONArray("notes")[0] as JSONObject).getString("content")
+                            val newObject = SmithsonianObject(id = id, title = title, image = image, date = date, name = name, notes = notes)
                             result.add(newObject)
                         }
                         else {
