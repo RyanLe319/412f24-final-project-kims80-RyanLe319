@@ -201,8 +201,28 @@ class MainActivity : ComponentActivity() {
             val currentRow = remember { mutableIntStateOf(0) }
             val trigger = remember { mutableStateOf(true) }
             var status by remember { mutableStateOf("Waiting for search") }
-            var selectedTerm: MutableState<String> =  remember { mutableStateOf("") }
+            var termIndex =  remember { mutableIntStateOf(0) }
             val dbman = MyDatabaseManager(context)
+            val terms = listOf("culture", "data_source", "date", "place", "topic")
+            val culture = remember { mutableStateListOf("")}
+            val data_source = remember { mutableStateListOf("")}
+            val date = remember { mutableStateListOf("")}
+            val place = remember { mutableStateListOf("")}
+            val topic = remember { mutableStateListOf("")}
+            val termsList = listOf(culture, data_source, date, place, topic)
+
+            // Cache terms
+            LaunchedEffect(true) {
+                for(i in terms.indices) {
+                    scope.launch(Dispatchers.IO) {
+                        val temp = SmithsonianApi.searchTerms(terms[i])
+                        withContext(Dispatchers.Main) {
+                            termsList[i].clear()
+                            termsList[i].addAll(temp)
+                        }
+                    }
+                }
+            }
 
             // Color stuff
             val allColors = arrayOf(
@@ -511,7 +531,7 @@ class MainActivity : ComponentActivity() {
                                         textColor = textColor,
                                         font = font,
                                         onClick = {
-                                            selectedTerm.value = buttonTexts[i]
+                                            termIndex.intValue = i
                                             navController.navigate(Screens.SUBTERMS.name)
                                         }
                                     )
@@ -522,25 +542,7 @@ class MainActivity : ComponentActivity() {
                 }
                 // Page where you can select sub terms to search
                 composable(Screens.SUBTERMS.name) {
-                    val termsList = remember { mutableStateListOf<String>() }
-                    val isLoading = remember { mutableStateOf(true) }
-
-                    LaunchedEffect(true) {
-                        isLoading.value = true
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                val fetchedTerms = SmithsonianApi.searchTerms(selectedTerm.value)
-                                withContext(Dispatchers.Main) {
-                                    termsList.clear()
-                                    termsList.addAll(fetchedTerms)
-                                }
-                            } catch (e: Exception) {
-                                termsList.clear()
-                            } finally {
-                                isLoading.value = false
-                            }
-                        }
-                    }
+                    val termList = termsList[termIndex.intValue]
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -557,41 +559,36 @@ class MainActivity : ComponentActivity() {
                                 verticalArrangement = Arrangement.Top,
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                if (isLoading.value) {
-                                    Text(text = "Loading...")
-                                }
-                                else {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(bottom = 16.dp)
-                                    ) {
-                                        items(termsList) { term ->
-                                            Box(
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 16.dp)
+                                ) {
+                                    items(termList) { term ->
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(uiColor)
+                                                .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
+                                        ) {
+                                            Text(
+                                                text = term,
+                                                fontSize = 20.sp,
+                                                fontFamily = font,
                                                 modifier = Modifier
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(uiColor)
-                                                    .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
-                                            ) {
-                                                Text(
-                                                    text = term,
-                                                    fontSize = 20.sp,
-                                                    fontFamily = font,
-                                                    modifier = Modifier
-                                                        .padding(8.dp)
-                                                        .clickable {
-                                                            keyword = term
-                                                            searchAll = true
-                                                            currentRow.intValue = 0
-                                                            objectList.clear()
-                                                            navController.navigate(Screens.ITEMS.name)
-                                                        }
-                                                        .fillParentMaxWidth()
-                                                        .padding(5.dp),
-                                                    color = textColor
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(5.dp))
+                                                    .padding(8.dp)
+                                                    .clickable {
+                                                        keyword = term
+                                                        searchAll = true
+                                                        currentRow.intValue = 0
+                                                        objectList.clear()
+                                                        navController.navigate(Screens.ITEMS.name)
+                                                    }
+                                                    .fillParentMaxWidth()
+                                                    .padding(5.dp),
+                                                color = textColor
+                                            )
                                         }
+                                        Spacer(modifier = Modifier.height(5.dp))
                                     }
                                 }
                             }
