@@ -988,7 +988,7 @@ fun DisplayObjectsOnFavorite(
     backgroundColor: Color
 ) {
     val show = rememberSaveable { mutableStateOf(false) }
-    val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
+    val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
 
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
