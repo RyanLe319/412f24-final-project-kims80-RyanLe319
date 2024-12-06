@@ -203,11 +203,29 @@ class MainActivity : ComponentActivity() {
             val currentRow = remember { mutableIntStateOf(0) }
             val trigger = remember { mutableStateOf(true) }
             var status by remember { mutableStateOf("Waiting for search") }
-            var selectedTerm: MutableState<String> =  remember { mutableStateOf("") }
+            var termIndex =  remember { mutableIntStateOf(0) }
             val dbman = MyDatabaseManager(context)
-
+            val terms = listOf("culture", "data_source", "date", "place", "topic")
+            val culture = remember { mutableStateListOf("")}
+            val data_source = remember { mutableStateListOf("")}
+            val date = remember { mutableStateListOf("")}
+            val place = remember { mutableStateListOf("")}
+            val topic = remember { mutableStateListOf("")}
+            val termsList = listOf(culture, data_source, date, place, topic)
             val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+            // Cache terms
+            LaunchedEffect(true) {
+                for(i in terms.indices) {
+                    scope.launch(Dispatchers.IO) {
+                        val temp = SmithsonianApi.searchTerms(terms[i])
+                        withContext(Dispatchers.Main) {
+                            termsList[i].clear()
+                            termsList[i].addAll(temp)
+                        }
+                    }
+                }
+            }
 
             // Color stuff
             val allColors = arrayOf(
@@ -284,7 +302,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-
 
             NavHost(navController, startDestination = Screens.MAIN.name) {
                 // Main menu with major options
@@ -669,7 +686,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-
                 // Page where you can search for objects by terms
                 composable(Screens.TERMS.name) {
                     val buttonTexts = listOf("culture", "data_source", "date", "place", "topic")
@@ -678,19 +694,17 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(backgroundColor)
                     ) {
-                        // Landscape layout
-                        if (isLandscape) {
+
+                        if(isLandscape){
                             Column(
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                TopBar(true, true, topColor, iconColor, textColor, navController)
-
+                                TopBar(true, false, topColor, iconColor, textColor, navController)
                                 Row(
                                     modifier = Modifier.fillMaxSize(),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
-                                ) {
-
+                                ){
                                     // Left side: Text with a large font
                                     Column(
                                         modifier = Modifier
@@ -709,13 +723,13 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
-                                    // Right side: Buttons
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.6f) // Buttons take up the remaining space
+                                            .weight(.6f)
                                             .fillMaxHeight()
                                             .padding(16.dp),
-                                        verticalArrangement = Arrangement.SpaceEvenly
+                                        verticalArrangement = Arrangement.SpaceEvenly,
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         for (i in buttonTexts.indices) {
                                             LandscapeGenerateClickableRectangle(
@@ -724,7 +738,7 @@ class MainActivity : ComponentActivity() {
                                                 textColor = textColor,
                                                 font = font,
                                                 onClick = {
-                                                    selectedTerm.value = buttonTexts[i]
+                                                    termIndex.intValue = i
                                                     navController.navigate(Screens.SUBTERMS.name)
                                                 }
                                             )
@@ -732,10 +746,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                        }
-
-                        // Portrait layout
-                        else {
+                        }else{
                             Column(
                                 modifier = Modifier.fillMaxSize()
                             ) {
@@ -761,7 +772,7 @@ class MainActivity : ComponentActivity() {
                                             textColor = textColor,
                                             font = font,
                                             onClick = {
-                                                selectedTerm.value = buttonTexts[i]
+                                                termIndex.intValue = i
                                                 navController.navigate(Screens.SUBTERMS.name)
                                             }
                                         )
@@ -771,164 +782,61 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-
                 // Page where you can select sub terms to search
                 composable(Screens.SUBTERMS.name) {
-                    val termsList = remember { mutableStateListOf<String>() }
-                    val isLoading = remember { mutableStateOf(true) }
-
-                    // LaunchedEffect for fetching data (this is executed regardless of the orientation)
-                    LaunchedEffect(true) {
-                        isLoading.value = true
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                val fetchedTerms = SmithsonianApi.searchTerms(selectedTerm.value)
-                                withContext(Dispatchers.Main) {
-                                    termsList.clear()
-                                    termsList.addAll(fetchedTerms)
-                                }
-                            } catch (e: Exception) {
-                                termsList.clear()
-                            } finally {
-                                isLoading.value = false
-                            }
-                        }
-                    }
-
-                    // Box layout for the screen (this is executed regardless of the orientation)
+                    val termList = termsList[termIndex.intValue]
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(backgroundColor)
                     ) {
-                        if (isLandscape) {
-                            // Landscape layout
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.Top
-                            ) {
-
-                                TopBar(true, true, topColor, iconColor, textColor, navController)
-
-                                // Left side: Display a title and possibly an introductory text
-                                Column(
-                                    modifier = Modifier
-                                        .weight(0.3f) // Adjust as needed
-                                        .fillMaxHeight()
-                                        .padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "Choose a subterm",
-                                        fontSize = 32.sp,
-                                        color = textColor,
-                                        fontFamily = font,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-
-                                // Right side: Terms List
-                                Column(
-                                    modifier = Modifier
-                                        .weight(0.7f) // Larger area for terms list
-                                        .fillMaxHeight()
-                                        .padding(16.dp)
-                                ) {
-                                    if (isLoading.value) {
-                                        Text(text = "Loading...")
-                                    } else {
-                                        LazyColumn(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentPadding = PaddingValues(bottom = 16.dp)
-                                        ) {
-                                            items(termsList) { term ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(16.dp))
-                                                        .background(uiColor)
-                                                        .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
-                                                ) {
-                                                    Text(
-                                                        text = term,
-                                                        fontSize = 20.sp,
-                                                        fontFamily = font,
-                                                        modifier = Modifier
-                                                            .padding(8.dp)
-                                                            .clickable {
-                                                                keyword = term
-                                                                searchAll = true
-                                                                currentRow.intValue = 0
-                                                                objectList.clear()
-                                                                navController.navigate(Screens.ITEMS.name)
-                                                            }
-                                                            .fillParentMaxWidth()
-                                                            .padding(5.dp),
-                                                        color = textColor
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(5.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            // Portrait layout (default)
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            TopBar(true, true, topColor, iconColor, textColor, navController)
                             Column(
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Top,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                TopBar(true, true, topColor, iconColor, textColor, navController)
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.Top,
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 16.dp)
                                 ) {
-                                    if (isLoading.value) {
-                                        Text(text = "Loading...")
-                                    } else {
-                                        LazyColumn(
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentPadding = PaddingValues(bottom = 16.dp)
+                                    items(termList) { term ->
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(uiColor)
+                                                .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
                                         ) {
-                                            items(termsList) { term ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(16.dp))
-                                                        .background(uiColor)
-                                                        .border(2.dp, Color.Gray, RoundedCornerShape(16.dp))
-                                                ) {
-                                                    Text(
-                                                        text = term,
-                                                        fontSize = 20.sp,
-                                                        fontFamily = font,
-                                                        modifier = Modifier
-                                                            .padding(8.dp)
-                                                            .clickable {
-                                                                keyword = term
-                                                                searchAll = true
-                                                                currentRow.intValue = 0
-                                                                objectList.clear()
-                                                                navController.navigate(Screens.ITEMS.name)
-                                                            }
-                                                            .fillParentMaxWidth()
-                                                            .padding(5.dp),
-                                                        color = textColor
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(5.dp))
-                                            }
+                                            Text(
+                                                text = term,
+                                                fontSize = 20.sp,
+                                                fontFamily = font,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                                    .clickable {
+                                                        keyword = term
+                                                        searchAll = true
+                                                        currentRow.intValue = 0
+                                                        objectList.clear()
+                                                        navController.navigate(Screens.ITEMS.name)
+                                                    }
+                                                    .fillParentMaxWidth()
+                                                    .padding(5.dp),
+                                                color = textColor
+                                            )
                                         }
+                                        Spacer(modifier = Modifier.height(5.dp))
                                     }
                                 }
                             }
                         }
                     }
                 }
-
                 // Page to display the term search objects
                 composable(Screens.ITEMS.name) {
                     // Add some initial objects
@@ -1084,7 +992,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-
                 // Page where you can choose app color scheme
                 composable(Screens.COLORS.name) {
                     Box(
@@ -1217,7 +1124,7 @@ fun LandscapeGenerateClickableRectangle(
     Box(
         modifier = Modifier
             .fillMaxWidth(0.8f) // Adjust the width to be 80% of the available space
-            .height(60.dp)      // Reduce the height to 60.dp
+            .height(45.dp)      // Reduce the height to 60.dp
             .clip(RoundedCornerShape(20.dp)) // Slightly smaller corner radius
             .background(buttonColor)
             .clickable(onClick = onClick),
@@ -1410,6 +1317,7 @@ fun DisplayObjects(
     }
 }
 
+
 @Composable
 fun DisplayObjectsOnFavorite(
     objectList: SnapshotStateList<SmithsonianObject>,
@@ -1504,6 +1412,7 @@ fun DisplayObjectsOnFavorite(
         )
     }
 }
+
 
 
 // Composable to display a list of term options for a term category
