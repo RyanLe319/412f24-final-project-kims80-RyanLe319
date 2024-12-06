@@ -992,6 +992,24 @@ fun DisplayObjectsOnFavorite(
     val show = rememberSaveable { mutableStateOf(false) }
     val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
 
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ){
+        Button(
+            onClick = {
+                dbman.clearDatabase()
+                objectList.clear()
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = backgroundColor, // Example color
+                contentColor = textColor
+            )
+        ) {
+            Text("CLEAR ALL", fontFamily = font, color = textColor)
+        }
+    }
+
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
     ) {
