@@ -91,20 +91,26 @@ enum class Screens {
 val batchSize = 1000
 
 
-class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
+class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("""
             CREATE TABLE IF NOT EXISTS SMITHSONIAN_OBJECTS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, 
                 title TEXT UNIQUE,  -- Enforce uniqueness on the 'title' column
-                imageUrl TEXT
+                imageUrl TEXT,
+                date TEXT,
+                name TEXT
             )
         """)
     }
 
-    override fun onUpgrade(p0: SQLiteDatabase?, p1: Int, p2: Int) {
-        // Handle database upgrade if needed
+    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            Log.d("DatabaseManager", "Upgrading database from version $oldVersion to $newVersion")
+            db?.execSQL("ALTER TABLE SMITHSONIAN_OBJECTS ADD COLUMN date TEXT")
+            db?.execSQL("ALTER TABLE SMITHSONIAN_OBJECTS ADD COLUMN name TEXT")
+        }
     }
 
     // Check if an object already exists in the database
@@ -116,22 +122,26 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         return exists
     }
 
-    // Insert a SmithsonianObject only if it doesn't already exist
     fun insertObject(smithsonianObject: SmithsonianObject) {
-        if (!isObjectExists(smithsonianObject.title)) { // Check for duplicates
-            val query = "INSERT INTO SMITHSONIAN_OBJECTS (title, imageUrl) VALUES(?, ?)"
+        if (!isObjectExists(smithsonianObject.title)) {
+            val query = """
+                INSERT INTO SMITHSONIAN_OBJECTS (title, imageUrl, date, name) 
+                VALUES (?, ?, ?, ?)
+            """
             val statement = writableDatabase.compileStatement(query)
             statement.bindString(1, smithsonianObject.title)
             statement.bindString(2, smithsonianObject.image)
             statement.executeInsert()
+            Log.d("@@@DB", "Inserted object with title: ${smithsonianObject.title}")
         } else {
-            Log.d("DatabaseManager", "Object with title '${smithsonianObject.title}' already exists.")
+            Log.d("@@@DB", "Object with title '${smithsonianObject.title}' already exists.")
         }
     }
 
     fun clearDatabase() {
         val db = writableDatabase
         db.execSQL("DELETE FROM SMITHSONIAN_OBJECTS") // Deletes all rows in the table
+        Log.d("@@@", "clearing db")
         db.close()
     }
 
@@ -144,7 +154,6 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         }
     }
 
-    // Function to retrieve all Smithsonian objects from the database
     fun getAllObjects(): List<SmithsonianObject> {
         val objects = mutableListOf<SmithsonianObject>()
         val query = "SELECT * FROM SMITHSONIAN_OBJECTS"
@@ -153,12 +162,16 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
             val id = cursor.getString(cursor.getColumnIndexOrThrow("id"))
             val title = cursor.getString(cursor.getColumnIndexOrThrow("title"))
             val imageUrl = cursor.getString(cursor.getColumnIndexOrThrow("imageUrl"))
-            objects.add(SmithsonianObject(id = id, title = title, image = imageUrl))
+            val date = cursor.getString(cursor.getColumnIndexOrThrow("date")) ?: ""
+            val name = cursor.getString(cursor.getColumnIndexOrThrow("name")) ?: ""
+            objects.add(SmithsonianObject(id = id, title = title, image = imageUrl, date = date, name = name))
         }
         cursor.close()
+        Log.d("@@@", "Fetched ${objects.size} objects from the database.")
         return objects
     }
 }
+
 
 
 // Font stuff
@@ -458,7 +471,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 Text(status)
                                 // Display of items searched
-                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor)
+                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor, backgroundColor)
                             }
                         }
                     }
@@ -618,108 +631,57 @@ class MainActivity : ComponentActivity() {
                                     .weight(1f)
                             ) {
                                 Text(status)
-                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor)
+                                DisplayObjects(objectList, trigger, dbman, uiColor, textColor, backgroundColor)
                             }
                         }
                     }
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
-                    // Favorites screen content
-                    val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
-                    val isLoading = remember { mutableStateOf(true) }
-                    // Fetch data from the database when the Favorites screen is displayed
-                    LaunchedEffect(Unit) {
-                        isLoading.value = true
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                val cursor = dbman.readableDatabase.rawQuery(
-                                    "SELECT * FROM SMITHSONIAN_OBJECTS",
-                                    null
-                                )
-                                val fetchedFavorites = mutableListOf<SmithsonianObject>()
-                                while (cursor.moveToNext()) {
-                                    val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
-                                    val title =
-                                        cursor.getString(cursor.getColumnIndexOrThrow("title"))
-                                    val imageUrl =
-                                        cursor.getString(cursor.getColumnIndexOrThrow("imageUrl"))
-                                    fetchedFavorites.add(
-                                        SmithsonianObject(
-                                            id = id.toString(),
-                                            title = title,
-                                            image = imageUrl
-                                        )
-                                    )
-                                }
-                                cursor.close()
-                                withContext(Dispatchers.Main) {
-                                    favoritesList.clear()
-                                    favoritesList.addAll(fetchedFavorites)
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                            } finally {
-                                isLoading.value = false
-                            }
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = "Favorites",
-                            fontSize = 30.sp,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        if (isLoading.value) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Loading...")
-                            }
-                        } else if (favoritesList.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No Favorites Found")
-                            }
-                        } else {
-                            LazyVerticalStaggeredGrid(
-                                columns = StaggeredGridCells.Fixed(3),
-                                contentPadding = PaddingValues(16.dp)
-                            ) {
-                                items(favoritesList.size) { index ->
-                                    val favorite = favoritesList[index]
-                                    Column(
-                                        modifier = Modifier.padding(8.dp)
-                                    ) {
-                                        AsyncImage(
-                                            model = favorite.image,
-                                            contentDescription = favorite.title,
-                                            placeholder = painterResource(R.drawable.placeholder),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                        )
-                                        Text(
-                                            text = favorite.title,
-                                        )
-                                        Button(onClick = {
-                                            dbman.deleteObject(favorite.title)
-                                            favoritesList.removeAt(index)
-                                        }) {
-                                            Text("Delete")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+//                    val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
+//
+//                    // Fetch data from the database when the Favorites screen is displayed
+//                    LaunchedEffect(Unit) {
+//                        scope.launch(Dispatchers.IO) {
+//                            try {
+//                                val fetchedFavorites = dbman.getAllObjects()  // Fetching all objects from the database
+//                                withContext(Dispatchers.Main) {
+//                                    favoritesList.clear()
+//                                    favoritesList.addAll(fetchedFavorites)
+//                                }
+//                            } catch (e: Exception) {
+//                                e.printStackTrace()
+//                            }
+//                        }
+//                    }
+//
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                            .background(uiColor)
+//                    ) {
+//                        Column(modifier = Modifier.fillMaxSize()) {
+//                            TopBar(
+//                                back = true,
+//                                home = true,
+//                                topColor = topColor,
+//                                iconColor = iconColor,
+//                                textColor = textColor,
+//                                navController = navController
+//                            )
+//
+//                            // Call the new DisplayObjectsOnFavorite function
+//                            DisplayObjectsOnFavorite(
+//                                objectList = favoritesList,
+//                                trigger = trigger,  // Assuming `trigger` is defined earlier
+//                                dbman = dbman,
+//                                uiColor = uiColor,
+//                                textColor = textColor,
+//                                background = backgroundColor
+//                            )
+//                        }
+//                    }
                 }
-
-
                 // Page where you can choose app color scheme
                 composable(Screens.COLORS.name) {
                     Box(
@@ -945,7 +907,8 @@ fun DisplayObjects(
     trigger: MutableState<Boolean>,
     dbman: MyDatabaseManager,
     uiColor: Color,
-    textColor: Color
+    textColor: Color,
+    background: Color
 ) {
     val show = rememberSaveable { mutableStateOf(false) }
     val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
@@ -972,7 +935,8 @@ fun DisplayObjects(
                         contentDescription = objectList[index].title,
                         placeholder = painterResource(R.drawable.placeholder)
                     )
-                    Text(objectList[index].title,
+                    Text(
+                        objectList[index].title,
                         fontFamily = font,
                         fontSize = 16.sp,
                         color = textColor,
@@ -980,20 +944,101 @@ fun DisplayObjects(
                     )
                     Button(
                         onClick = {
-                            dbman.insertObject(objectList[index])
-                        }
+                            // Create a new SmithsonianObject to add to the favorites
+                            val objectToFavorite = SmithsonianObject(
+                                id = "",
+                                title = objectList[index].title,
+                                image = objectList[index].image,
+                                date = objectList[index].date,
+                                name = objectList[index].name
+                            )
+                            dbman.insertObject(objectToFavorite)
+                            dbman.getAllObjects()
+                        },colors = ButtonDefaults.buttonColors(
+                            containerColor = background, // Example color
+                            contentColor = textColor
+                        )
+
                     ) {
                         Text("Favorite", fontFamily = font, color = textColor)
                     }
-
-
                 }
             }
         }
     }
-    if(show.value) {
+    if (show.value) {
         DisplayDialogue(
-            onDismissRequest = {show.value = false},
+            onDismissRequest = { show.value = false },
+            selection.value,
+            textColor,
+            uiColor,
+            dbman
+        )
+    }
+}
+
+@Composable
+fun DisplayObjectsOnFavorite(
+    objectList: SnapshotStateList<SmithsonianObject>,
+    trigger: MutableState<Boolean>,
+    dbman: MyDatabaseManager,
+    uiColor: Color,
+    textColor: Color,
+    background: Color
+) {
+    val show = rememberSaveable { mutableStateOf(false) }
+    val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
+
+    LazyVerticalStaggeredGrid(
+        columns = StaggeredGridCells.Fixed(3)
+    ) {
+        items(objectList.size) { index ->
+            if (index == objectList.size - 1 && trigger.value) {
+                trigger.value = false
+            }
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(uiColor)
+                    .padding(1.dp)
+                    .clickable {
+                        show.value = true
+                        selection.value = objectList[index]
+                    }
+            ) {
+                Column {
+                    AsyncImage(
+                        model = objectList[index].image,
+                        contentDescription = objectList[index].title,
+                        placeholder = painterResource(R.drawable.placeholder)
+                    )
+                    Text(
+                        objectList[index].title,
+                        fontFamily = font,
+                        fontSize = 16.sp,
+                        color = textColor,
+                        modifier = Modifier.padding(5.dp)
+                    )
+                    Button(
+                        onClick = {
+                            // Delete the object from the database
+                            dbman.deleteObject(objectList[index].title)
+                            // Remove the object from the list
+                            objectList.removeAt(index)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = background, // Example color
+                            contentColor = textColor
+                        )
+                    ) {
+                        Text("Delete", fontFamily = font, color = textColor)
+                    }
+                }
+            }
+        }
+    }
+    if (show.value) {
+        DisplayDialogue(
+            onDismissRequest = { show.value = false },
             selection.value,
             textColor,
             uiColor,
@@ -1034,41 +1079,7 @@ fun DisplayDialogue(
                 Text("Title: ${obj.title}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Date: ${obj.date}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Author: ${obj.name}", fontSize = 24.sp, fontFamily = font, color = textColor)
-                Text("Notes: ${obj.notes}", fontSize = 24.sp, fontFamily = font, color = textColor)
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Button(
-                        onClick = { onDismissRequest() },
-                        colors = ButtonDefaults.buttonColors(containerColor = uiColor, contentColor = textColor)
-                    ) {
-                        Text(text = "Close", color = textColor)
-                    }
-
-//                    Button(
-//                        onClick = {
-//                            // Insert the object into the database on a background thread
-//                            CoroutineScope(Dispatchers.IO).launch {
-//                                databaseManager.insertObject(obj)
-//                            }
-//                        },
-//                        colors = ButtonDefaults.buttonColors(containerColor = uiColor, contentColor = textColor)
-//                    ) {
-//                        Text(text = "Favorite", color = textColor)
-//                    }
-                    Button(onClick = {
-                        val objectToFavorite = SmithsonianObject(
-                            id = "",
-                            title = obj.title,
-                            image = obj.image
-                        )
-                        dbman.insertObject(objectToFavorite)
-                    }) {
-                        Text("Favorite")
-                    }
-                }
             }
         }
     }
