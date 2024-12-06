@@ -131,6 +131,8 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
             val statement = writableDatabase.compileStatement(query)
             statement.bindString(1, smithsonianObject.title)
             statement.bindString(2, smithsonianObject.image)
+            statement.bindString(3, smithsonianObject.date)
+            statement.bindString(4, smithsonianObject.name)
             statement.executeInsert()
             Log.d("@@@DB", "Inserted object with title: ${smithsonianObject.title}")
         } else {
@@ -379,7 +381,7 @@ class MainActivity : ComponentActivity() {
                                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) // Updated to match variable name
                                             },
                                             modifier = Modifier.fillMaxWidth().
-                                                        menuAnchor()
+                                            menuAnchor()
                                         )
 
                                         // Dropdown menu items
@@ -408,7 +410,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                               }
+                                }
                                 // Text field for entering keyword and search button
                                 Row {
                                     TextField(
@@ -827,7 +829,7 @@ fun GenerateBackButton(navController: NavController, iconColor: Color) {
 fun GenerateHomeButton(navController: NavController, iconColor: Color) {
     IconButton(
         onClick = {
-                navController.navigate(Screens.MAIN.name)
+            navController.navigate(Screens.MAIN.name)
         },
         modifier = Modifier.fillMaxHeight()
     ) {
@@ -988,7 +990,25 @@ fun DisplayObjectsOnFavorite(
     backgroundColor: Color
 ) {
     val show = rememberSaveable { mutableStateOf(false) }
-    val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
+    val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ){
+        Button(
+            onClick = {
+                dbman.clearDatabase()
+                objectList.clear()
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = backgroundColor, // Example color
+                contentColor = textColor
+            )
+        ) {
+            Text("CLEAR ALL", fontFamily = font, color = textColor)
+        }
+    }
 
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
@@ -1078,7 +1098,7 @@ fun DisplayDialogue(
                     contentDescription = obj.title,
                     placeholder = painterResource(R.drawable.placeholder)
                 )
-                Text("ID: ${obj.id}", fontSize = 24.sp, fontFamily = font, color = textColor)
+                //Text("ID: ${obj.id}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Title: ${obj.title}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Date: ${obj.date}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Author: ${obj.name}", fontSize = 24.sp, fontFamily = font, color = textColor)
