@@ -99,7 +99,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         db?.execSQL("""
             CREATE TABLE IF NOT EXISTS SMITHSONIAN_OBJECTS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                title TEXT UNIQUE,  -- Enforce uniqueness on the 'title' column
+                title TEXT UNIQUE, 
                 imageUrl TEXT,
                 date TEXT,
                 name TEXT
@@ -115,7 +115,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         }
     }
 
-    // Check if an object already exists in the database
+    // Method to check if the object is already in the db
     fun isObjectExists(title: String): Boolean {
         val query = "SELECT 1 FROM SMITHSONIAN_OBJECTS WHERE title = ?"
         val cursor = readableDatabase.rawQuery(query, arrayOf(title))
@@ -124,6 +124,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         return exists
     }
 
+    // If the obj is not in the db then insert it with this function
     fun insertObject(smithsonianObject: SmithsonianObject) {
         if (!isObjectExists(smithsonianObject.title)) {
             val query = """
@@ -142,6 +143,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         }
     }
 
+    //Method to clear the db
     fun clearDatabase() {
         val db = writableDatabase
         db.execSQL("DELETE FROM SMITHSONIAN_OBJECTS") // Deletes all rows in the table
@@ -149,6 +151,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         db.close()
     }
 
+    //Method to delete an obj
     fun deleteObject(title: String) {
         if (isObjectExists(title)) {
             val query = "DELETE FROM SMITHSONIAN_OBJECTS WHERE title = ?"
@@ -158,6 +161,7 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         }
     }
 
+    //Method to get all objs
     fun getAllObjects(): List<SmithsonianObject> {
         val objects = mutableListOf<SmithsonianObject>()
         val query = "SELECT * FROM SMITHSONIAN_OBJECTS"
@@ -175,8 +179,6 @@ class MyDatabaseManager(context: Context) : SQLiteOpenHelper(context, "MyDb", nu
         return objects
     }
 }
-
-
 
 // Font stuff
 val font = FontFamily(
@@ -330,7 +332,6 @@ class MainActivity : ComponentActivity() {
                                     horizontalArrangement = Arrangement.SpaceEvenly,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left side: Smithsonian Institution Open Access text
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
@@ -346,8 +347,6 @@ class MainActivity : ComponentActivity() {
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
-
-                                    // Right side: Buttons stacked vertically
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
@@ -368,6 +367,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            //If portrait
                             Column(
                                 modifier = Modifier
                                     .padding(16.dp)
@@ -406,34 +406,33 @@ class MainActivity : ComponentActivity() {
                             Column(
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                // Top Bar
                                 TopBar(true, false, topColor, iconColor, textColor, navController)
-
                                 Row(
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    // Left half (Part 2) - Displays objects
+
+                                    // Displays the objs on the left half of the screen
                                     Box(
                                         modifier = Modifier
-                                            .weight(1f) // Takes up half the screen width
+                                            .weight(1f)
                                             .fillMaxHeight()
                                     ) {
                                         DisplayObjects(objectList, trigger, dbman, uiColor, textColor, backgroundColor)
                                     }
 
-                                    // Right half (Part 1) - Dropdown, TextField, and Search Button
+                                    // Right half of the screen
                                     Column(
                                         modifier = Modifier
-                                            .weight(1f) // Takes up the other half of the screen width
+                                            .weight(1f)
                                             .fillMaxHeight()
-                                            .padding(16.dp) // Optional: adds some padding for spacing
+                                            .padding(16.dp)
                                     ) {
                                         var tempSearch = true
                                         var tempCategory by remember { mutableStateOf("All") }
                                         var tempKeyword by remember { mutableStateOf("") }
                                         var expanded by remember { mutableStateOf(false) }
 
-                                        // Dropdown menu
+                                        //Dropdown menu to select a category
                                         ExposedDropdownMenuBox(
                                             expanded = expanded,
                                             onExpandedChange = { expanded = !expanded }
@@ -446,7 +445,7 @@ class MainActivity : ComponentActivity() {
                                                     "All" -> "All"
                                                     else -> "Select Category"
                                                 },
-                                                onValueChange = {}, // No manual input
+                                                onValueChange = {},
                                                 readOnly = true,
                                                 label = { Text("Category") },
                                                 trailingIcon = {
@@ -483,7 +482,8 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        // Text field for entering keyword and search button
+                                        //Row that contains where the user can input txt and the
+                                        //search button
                                         Row(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
@@ -550,14 +550,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // Portrait Mode layout (with TopBar)
+                        // Portrait orientation
                         else {
                             Column(
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                // Top Bar
                                 TopBar(true, false, topColor, iconColor, textColor, navController)
-
                                 Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
@@ -566,10 +564,11 @@ class MainActivity : ComponentActivity() {
                                     var tempKeyword by remember { mutableStateOf("") }
                                     var expanded by remember { mutableStateOf(false) }
 
-                                    // Buttons for choosing category
                                     Row(
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
+
+                                        //Dropdown menu to select a category
                                         ExposedDropdownMenuBox(
                                             expanded = expanded,
                                             onExpandedChange = { expanded = !expanded }
@@ -582,7 +581,7 @@ class MainActivity : ComponentActivity() {
                                                     "All" -> "All"
                                                     else -> "Select Category"
                                                 },
-                                                onValueChange = {}, // No manual input
+                                                onValueChange = {},
                                                 readOnly = true,
                                                 label = { Text("Category") },
                                                 trailingIcon = {
@@ -591,7 +590,6 @@ class MainActivity : ComponentActivity() {
                                                 modifier = Modifier.fillMaxWidth().menuAnchor()
                                             )
 
-                                            // Dropdown menu items
                                             ExposedDropdownMenu(
                                                 expanded = expanded,
                                                 onDismissRequest = { expanded = false }
@@ -679,7 +677,6 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                     Text(status)
-                                    // Display of items searched
                                     DisplayObjects(objectList, trigger, dbman, uiColor, textColor, backgroundColor)
                                 }
                             }
@@ -694,7 +691,6 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(backgroundColor)
                     ) {
-
                         if(isLandscape){
                             Column(
                                 modifier = Modifier.fillMaxSize()
@@ -705,10 +701,10 @@ class MainActivity : ComponentActivity() {
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ){
-                                    // Left side: Text with a large font
+                                    // Left side with text only
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.4f) // Adjust the weight as per your layout needs
+                                            .weight(0.4f)
                                             .fillMaxHeight()
                                             .padding(16.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -723,6 +719,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    //Right side with all the buttons
                                     Column(
                                         modifier = Modifier
                                             .weight(.6f)
@@ -746,6 +743,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                        // Portrait section
                         }else{
                             Column(
                                 modifier = Modifier.fillMaxSize()
@@ -880,12 +878,11 @@ class MainActivity : ComponentActivity() {
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
                     val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
-
-                    // Fetch data from the database when the Favorites screen is displayed
+                    // Fetch data from the database
                     LaunchedEffect(Unit) {
                         scope.launch(Dispatchers.IO) {
                             try {
-                                val fetchedFavorites = dbman.getAllObjects()  // Fetching all objects from the database
+                                val fetchedFavorites = dbman.getAllObjects()
                                 withContext(Dispatchers.Main) {
                                     favoritesList.clear()
                                     favoritesList.addAll(fetchedFavorites)
@@ -902,72 +899,23 @@ class MainActivity : ComponentActivity() {
                             .background(uiColor)
                     ) {
                         if (isLandscape) {
-                            // Landscape Layout
-
                             Column(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 TopBar(true, true, topColor, iconColor, textColor, navController)
 
-                                Row(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    // Left side: Display any other content or filters
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(0.3f) // Adjust as needed for the left side
-                                            .fillMaxHeight()
-                                            .padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        // Add any content or options for the left side in landscape
-                                        // Example: Text("Favorites List") or some filter options
-                                        Text(
-                                            text = "Favorites",
-                                            fontSize = 32.sp,
-                                            color = textColor,
-                                            fontFamily = font,
-                                            fontWeight = FontWeight.Bold
-                                        )
-
-                                        Button(
-                                            onClick = {
-                                                dbman.clearDatabase()
-                                                objectList.clear()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = backgroundColor, // Example color
-                                                contentColor = textColor
-                                            )
-                                        ) {
-                                            Text("CLEAR ALL", fontFamily = font, color = textColor)
-                                        }
-                                    }
-
-                                    // Right side: Display the favorites list
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(0.7f) // Larger area for the favorites list
-                                            .fillMaxHeight()
-                                            .padding(16.dp)
-                                    ) {
-                                        DisplayObjectsOnFavorite(
-                                            objectList = favoritesList,
-                                            trigger = trigger,  // Assuming `trigger` is defined earlier
-                                            dbman = dbman,
-                                            uiColor = uiColor,
-                                            textColor = textColor,
-                                            backgroundColor = backgroundColor,
-                                            isLandscape
-                                        )
-                                    }
-                                }
+                                LandscapeDisplayObjectsOnFavorite(
+                                    objectList = favoritesList,
+                                    trigger = trigger,
+                                    dbman = dbman,
+                                    uiColor = uiColor,
+                                    textColor = textColor,
+                                    backgroundColor = backgroundColor,
+                                    isLandscape
+                                )
                             }
                         } else {
-                            // Portrait Layout
+                            // Portrait Section
                             Column(modifier = Modifier.fillMaxSize()) {
                                 TopBar(
                                     back = true,
@@ -977,11 +925,9 @@ class MainActivity : ComponentActivity() {
                                     textColor = textColor,
                                     navController = navController
                                 )
-
-                                // Call the new DisplayObjectsOnFavorite function
                                 DisplayObjectsOnFavorite(
                                     objectList = favoritesList,
-                                    trigger = trigger,  // Assuming `trigger` is defined earlier
+                                    trigger = trigger,
                                     dbman = dbman,
                                     uiColor = uiColor,
                                     textColor = textColor,
@@ -1090,7 +1036,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Composable to generate a clickable rectangle with text
+// Composable to generate a clickable rectangle with text in portrait mode
 @Composable
 fun GenerateClickableRectangle(text: String, buttonColor: Color, textColor: Color, font: FontFamily, onClick: () -> Unit) {
     Box(
@@ -1112,7 +1058,7 @@ fun GenerateClickableRectangle(text: String, buttonColor: Color, textColor: Colo
     }
 }
 
-// Composable to generate a smaller clickable rectangle for landscape mode
+// Composable to generate a clickable rectangle with text in landscape mode
 @Composable
 fun LandscapeGenerateClickableRectangle(
     text: String,
@@ -1123,9 +1069,9 @@ fun LandscapeGenerateClickableRectangle(
 ) {
     Box(
         modifier = Modifier
-            .fillMaxWidth(0.8f) // Adjust the width to be 80% of the available space
-            .height(45.dp)      // Reduce the height to 60.dp
-            .clip(RoundedCornerShape(20.dp)) // Slightly smaller corner radius
+            .fillMaxWidth(0.8f)
+            .height(45.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(buttonColor)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -1133,7 +1079,7 @@ fun LandscapeGenerateClickableRectangle(
         Text(
             text = text,
             color = textColor,
-            fontSize = 20.sp,  // Slightly smaller font size
+            fontSize = 20.sp,
             fontFamily = font,
             fontWeight = FontWeight.Medium
         )
@@ -1283,7 +1229,6 @@ fun DisplayObjects(
                     )
                     Button(
                         onClick = {
-                            // Create a new SmithsonianObject to add to the favorites
                             val objectToFavorite = SmithsonianObject(
                                 id = "",
                                 title = objectList[index].title,
@@ -1294,7 +1239,7 @@ fun DisplayObjects(
                             dbman.insertObject(objectToFavorite)
                             dbman.getAllObjects()
                         },colors = ButtonDefaults.buttonColors(
-                            containerColor = backgroundColor, // Example color
+                            containerColor = backgroundColor,
                             contentColor = textColor
                         )
 
@@ -1331,29 +1276,24 @@ fun DisplayObjectsOnFavorite(
     val show = rememberSaveable { mutableStateOf(false) }
     val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
 
-    if(isLandscape){
-
-    }else {
-
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Button(
+            onClick = {
+                dbman.clearDatabase()
+                objectList.clear()
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = backgroundColor,
+                contentColor = textColor
+            )
         ) {
-            Button(
-                onClick = {
-                    dbman.clearDatabase()
-                    objectList.clear()
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = backgroundColor, // Example color
-                    contentColor = textColor
-                )
-            ) {
-                Text("CLEAR ALL", fontFamily = font, color = textColor)
-            }
+            Text("CLEAR ALL", fontFamily = font, color = textColor)
         }
     }
+
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
     ) {
@@ -1385,13 +1325,11 @@ fun DisplayObjectsOnFavorite(
                     )
                     Button(
                         onClick = {
-                            // Delete the object from the database
                             dbman.deleteObject(objectList[index].title)
-                            // Remove the object from the list
                             objectList.removeAt(index)
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = backgroundColor, // Example color
+                            containerColor = backgroundColor,
                             contentColor = textColor
                         )
                     ) {
@@ -1414,12 +1352,120 @@ fun DisplayObjectsOnFavorite(
 }
 
 
-
-// Composable to display a list of term options for a term category
 @Composable
-fun DisplayTermOptions(termList: List<String>) {
+fun LandscapeDisplayObjectsOnFavorite(
+    objectList: SnapshotStateList<SmithsonianObject>,
+    trigger: MutableState<Boolean>,
+    dbman: MyDatabaseManager,
+    uiColor: Color,
+    textColor: Color,
+    backgroundColor: Color,
+    isLandscape: Boolean
+) {
+    val show = rememberSaveable { mutableStateOf(false) }
+    val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+
+        Column(
+            modifier = Modifier
+                .weight(0.3f)
+                .fillMaxHeight()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ){
+            Text(
+                text = "Favorites",
+                fontSize = 32.sp,
+                color = textColor,
+                fontFamily = font,
+                fontWeight = FontWeight.Bold
+            )
+
+            Button(
+                onClick = {
+                    dbman.clearDatabase()
+                    objectList.clear()
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = backgroundColor, // Example color
+                    contentColor = textColor
+                )
+            ) {
+                Text("CLEAR ALL", fontFamily = font, color = textColor)
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(0.7f)
+                .fillMaxHeight()
+                .padding(16.dp)
+        ){
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(3)
+            ) {
+                items(objectList.size) { index ->
+                    if (index == objectList.size - 1 && trigger.value) {
+                        trigger.value = false
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                            .background(uiColor)
+                            .padding(1.dp)
+                            .clickable {
+                                show.value = true
+                                selection.value = objectList[index]
+                            }
+                    ) {
+                        Column {
+                            AsyncImage(
+                                model = objectList[index].image,
+                                contentDescription = objectList[index].title,
+                                placeholder = painterResource(R.drawable.placeholder)
+                            )
+                            Text(
+                                objectList[index].title,
+                                fontFamily = font,
+                                fontSize = 16.sp,
+                                color = textColor,
+                                modifier = Modifier.padding(5.dp)
+                            )
+                            Button(
+                                onClick = {
+                                    dbman.deleteObject(objectList[index].title)
+                                    objectList.removeAt(index)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = backgroundColor,
+                                    contentColor = textColor
+                                )
+                            ) {
+                                Text("Delete", fontFamily = font, color = textColor)
+                            }
+                        }
+                    }
+                }
+            }
+            if (show.value) {
+                DisplayDialogue(
+                    onDismissRequest = { show.value = false },
+                    selection.value,
+                    textColor,
+                    uiColor,
+                    backgroundColor,
+                    dbman
+                )
+            }
+        }
+
+    }
 
 }
+
 
 // Composable to display a dialogue for each Smithsonian object
 @Composable
