@@ -638,49 +638,49 @@ class MainActivity : ComponentActivity() {
                 }
                 // Page where you can see objects that were added to favorites
                 composable(Screens.FAVORITES.name) {
-//                    val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
-//
-//                    // Fetch data from the database when the Favorites screen is displayed
-//                    LaunchedEffect(Unit) {
-//                        scope.launch(Dispatchers.IO) {
-//                            try {
-//                                val fetchedFavorites = dbman.getAllObjects()  // Fetching all objects from the database
-//                                withContext(Dispatchers.Main) {
-//                                    favoritesList.clear()
-//                                    favoritesList.addAll(fetchedFavorites)
-//                                }
-//                            } catch (e: Exception) {
-//                                e.printStackTrace()
-//                            }
-//                        }
-//                    }
-//
-//                    Box(
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .background(uiColor)
-//                    ) {
-//                        Column(modifier = Modifier.fillMaxSize()) {
-//                            TopBar(
-//                                back = true,
-//                                home = true,
-//                                topColor = topColor,
-//                                iconColor = iconColor,
-//                                textColor = textColor,
-//                                navController = navController
-//                            )
-//
-//                            // Call the new DisplayObjectsOnFavorite function
-//                            DisplayObjectsOnFavorite(
-//                                objectList = favoritesList,
-//                                trigger = trigger,  // Assuming `trigger` is defined earlier
-//                                dbman = dbman,
-//                                uiColor = uiColor,
-//                                textColor = textColor,
-//                                background = backgroundColor
-//                            )
-//                        }
-//                    }
+                    val favoritesList = remember { mutableStateListOf<SmithsonianObject>() }
+
+                    // Fetch data from the database when the Favorites screen is displayed
+                    LaunchedEffect(Unit) {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val fetchedFavorites = dbman.getAllObjects()  // Fetching all objects from the database
+                                withContext(Dispatchers.Main) {
+                                    favoritesList.clear()
+                                    favoritesList.addAll(fetchedFavorites)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(uiColor)
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            TopBar(
+                                back = true,
+                                home = true,
+                                topColor = topColor,
+                                iconColor = iconColor,
+                                textColor = textColor,
+                                navController = navController
+                            )
+
+                            // Call the new DisplayObjectsOnFavorite function
+                            DisplayObjectsOnFavorite(
+                                objectList = favoritesList,
+                                trigger = trigger,  // Assuming `trigger` is defined earlier
+                                dbman = dbman,
+                                uiColor = uiColor,
+                                textColor = textColor,
+                                backgroundColor = backgroundColor
+                            )
+                        }
+                    }
                 }
                 // Page where you can choose app color scheme
                 composable(Screens.COLORS.name) {
@@ -908,10 +908,10 @@ fun DisplayObjects(
     dbman: MyDatabaseManager,
     uiColor: Color,
     textColor: Color,
-    background: Color
+    backgroundColor: Color
 ) {
     val show = rememberSaveable { mutableStateOf(false) }
-    val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
+    val selection = remember { mutableStateOf<SmithsonianObject?>(null) }
 
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(3)
@@ -955,7 +955,7 @@ fun DisplayObjects(
                             dbman.insertObject(objectToFavorite)
                             dbman.getAllObjects()
                         },colors = ButtonDefaults.buttonColors(
-                            containerColor = background, // Example color
+                            containerColor = backgroundColor, // Example color
                             contentColor = textColor
                         )
 
@@ -972,6 +972,7 @@ fun DisplayObjects(
             selection.value,
             textColor,
             uiColor,
+            backgroundColor,
             dbman
         )
     }
@@ -984,7 +985,7 @@ fun DisplayObjectsOnFavorite(
     dbman: MyDatabaseManager,
     uiColor: Color,
     textColor: Color,
-    background: Color
+    backgroundColor: Color
 ) {
     val show = rememberSaveable { mutableStateOf(false) }
     val selection = rememberSaveable { mutableStateOf<SmithsonianObject?>(null) }
@@ -1026,7 +1027,7 @@ fun DisplayObjectsOnFavorite(
                             objectList.removeAt(index)
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = background, // Example color
+                            containerColor = backgroundColor, // Example color
                             contentColor = textColor
                         )
                     ) {
@@ -1042,6 +1043,7 @@ fun DisplayObjectsOnFavorite(
             selection.value,
             textColor,
             uiColor,
+            backgroundColor,
             dbman
         )
     }
@@ -1061,6 +1063,7 @@ fun DisplayDialogue(
     obj: SmithsonianObject?,
     textColor: Color,
     uiColor: Color,
+    backgroundColor: Color,
     dbman: MyDatabaseManager
 ) {
     if (obj == null) {
@@ -1079,6 +1082,21 @@ fun DisplayDialogue(
                 Text("Title: ${obj.title}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Date: ${obj.date}", fontSize = 24.sp, fontFamily = font, color = textColor)
                 Text("Author: ${obj.name}", fontSize = 24.sp, fontFamily = font, color = textColor)
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Button(
+                        onClick = { onDismissRequest() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = backgroundColor,
+                            contentColor = textColor
+                        )
+                    ) {
+                        Text(text = "Close", color = textColor)
+                    }
+                }
 
             }
         }
